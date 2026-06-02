@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Sparkles, Loader2, AlertTriangle } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
-import { readConfig, useConfig, type AppConfig } from "@/lib/config";
+import { readConfig, useConfig } from "@/lib/config";
 
 export const Route = createFileRoute("/stage-2")({
   head: () => ({
@@ -18,48 +18,97 @@ export const Route = createFileRoute("/stage-2")({
   component: Stage2,
 });
 
-type Prospect = {
+// n8n workflow endpoint (local). The app POSTs { config, prospects } here;
+// n8n scores deterministically and Gemma writes each insight.
+const WEBHOOK_URL = "http://localhost:5678/webhook/prospect-scan";
+
+// Raw prospect attributes only — no fit, no insight. The workflow computes those.
+type InputProspect = {
+  name: string;
+  country: string;
+  volumeGWh: number;
+  swing: number;
+  credit: number;
+  strategic: number;
+};
+
+const INPUT_PROSPECTS: InputProspect[] = [
+  { name: "Westland Greenhouse Energy Co-op", country: "Netherlands", volumeGWh: 1250, swing: 95, credit: 80, strategic: 90 },
+  { name: "Stadswarmte Rotterdam", country: "Netherlands", volumeGWh: 980, swing: 88, credit: 85, strategic: 82 },
+  { name: "Benelux Power & Heat NV", country: "Belgium", volumeGWh: 1600, swing: 78, credit: 68, strategic: 80 },
+  { name: "NorthSea Industrial Gas BV", country: "Netherlands", volumeGWh: 2100, swing: 45, credit: 82, strategic: 65 },
+  { name: "Limburg Regional Supplier", country: "Netherlands", volumeGWh: 540, swing: 85, credit: 70, strategic: 60 },
+  { name: "Antwerp Chemicals Cluster", country: "Belgium", volumeGWh: 3400, swing: 25, credit: 88, strategic: 55 },
+];
+
+// Shape returned by the workflow.
+type Result = {
   rank: number;
   name: string;
   country: string;
   volume: string;
-  volumeGWh: number;
-  fit: number;
+  volumeGWh?: number;
+  fit: number | null;
+  band: "green" | "amber" | "grey";
+  belowTarget: boolean;
   insight: string;
 };
 
-const prospects: Prospect[] = [
-  { rank: 1, name: "Westland Greenhouse Energy Co-op", country: "Netherlands", volume: "1,250 GWh/yr", volumeGWh: 1250, fit: 92, insight: "Strong winter heating swing; storage-backed flexibility directly addresses their seasonal peak." },
-  { rank: 2, name: "Stadswarmte Rotterdam", country: "Netherlands", volume: "980 GWh/yr", volumeGWh: 980, fit: 88, insight: "District heating load is highly seasonal; good credit; natural fit for swing supply." },
-  { rank: 3, name: "Benelux Power & Heat NV", country: "Belgium", volume: "1,600 GWh/yr", volumeGWh: 1600, fit: 81, insight: "CHP operator with shoulder-season flexibility needs; larger volume, slightly weaker credit." },
-  { rank: 4, name: "NorthSea Industrial Gas BV", country: "Netherlands", volume: "2,100 GWh/yr", volumeGWh: 2100, fit: 74, insight: "High volume but flat profile; storage value limited unless paired with interruptible terms." },
-  { rank: 5, name: "Limburg Regional Supplier", country: "Netherlands", volume: "540 GWh/yr", volumeGWh: 540, fit: 69, insight: "Small LDC with clear swing need; volume below target, possible aggregation candidate." },
-  { rank: 6, name: "Antwerp Chemicals Cluster", country: "Belgium", volume: "3,400 GWh/yr", volumeGWh: 3400, fit: 58, insight: "Large but near-flat process demand; little seasonal optionality to monetise." },
-];
-
-function fitColor(fit: number, cfg: AppConfig) {
-  if (fit >= cfg.prospects.fitGreen) return "bg-emerald-500";
-  if (fit >= cfg.prospects.fitAmber) return "bg-amber-500";
+function bandBarColor(band: Result["band"]) {
+  if (band === "green") return "bg-emerald-500";
+  if (band === "amber") return "bg-amber-500";
   return "bg-muted-foreground/50";
 }
 
-function fitTextColor(fit: number, cfg: AppConfig) {
-  if (fit >= cfg.prospects.fitGreen) return "text-emerald-700";
-  if (fit >= cfg.prospects.fitAmber) return "text-amber-700";
+function bandTextColor(band: Result["band"]) {
+  if (band === "green") return "text-emerald-700";
+  if (band === "amber") return "text-amber-700";
   return "text-muted-foreground";
 }
 
 function Stage2() {
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
+  const [results, setResults] = useState<Result[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [cfg] = useConfig();
 
-  const runScan = () => {
-    // Full configuration object — this is what we'll POST to n8n later.
+  const runScan = async () => {
     const fullConfig = readConfig();
     // eslint-disable-next-line no-console
     console.log("[SEE Origination Hub] Workflow config payload:", fullConfig);
     setStatus("loading");
-    setTimeout(() => setStatus("done"), 2000);
+    setError(null);
+
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: fullConfig, prospects: INPUT_PROSPECTS }),
+      });
+      if (!res.ok) throw new Error(`Workflow returned HTTP ${res.status}`);
+      const data = await res.json();
+      const list: Result[] = Array.isArray(data?.prospects) ? data.prospects : [];
+      if (list.length === 0) throw new Error("Workflow returned no prospects");
+      setResults(list);
+      setStatus("done");
+    } catch (e) {
+      // Graceful fallback: show prospects with no score and a neutral note.
+      const minVol = fullConfig.prospects.minVolumeGWh;
+      const fallback: Result[] = INPUT_PROSPECTS.map((p, i) => ({
+        rank: i + 1,
+        name: p.name,
+        country: p.country,
+        volume: `${p.volumeGWh.toLocaleString()} GWh/yr`,
+        volumeGWh: p.volumeGWh,
+        fit: null,
+        band: "grey",
+        belowTarget: p.volumeGWh < minVol,
+        insight: "AI insight pending — workflow not reachable.",
+      }));
+      setResults(fallback);
+      setError((e as Error).message ?? "unknown error");
+      setStatus("done");
+    }
   };
 
   return (
@@ -146,12 +195,23 @@ function Stage2() {
               Aggregating data feeds and scoring counterparties…
             </span>
           )}
-          {status === "done" && (
+          {status === "done" && !error && (
             <span className="text-sm text-muted-foreground">
-              6 counterparties scored · sorted by Fit
+              {results.length} counterparties scored · sorted by Fit
             </span>
           )}
         </section>
+
+        {/* Error / fallback notice */}
+        {status === "done" && error && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Workflow unavailable — showing sample data without AI scoring.{" "}
+              <span className="text-amber-700/80">({error})</span>
+            </span>
+          </div>
+        )}
 
         {/* Results */}
         {status === "done" && (
@@ -174,50 +234,52 @@ function Stage2() {
                 </tr>
               </thead>
               <tbody>
-                {prospects.map((p) => {
-                  const belowTarget = p.volumeGWh < cfg.prospects.minVolumeGWh;
-                  return (
-                    <tr key={p.rank} className="border-t border-border align-top">
-                      <td className="px-4 py-4 font-semibold text-muted-foreground">{p.rank}</td>
-                      <td className="px-4 py-4 font-semibold text-foreground">{p.name}</td>
-                      <td className="px-4 py-4 text-muted-foreground">{p.country}</td>
-                      <td className="px-4 py-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-muted-foreground">{p.volume}</span>
-                          {belowTarget && (
-                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800">
-                              <AlertTriangle className="h-2.5 w-2.5" />
-                              Below target
-                            </span>
-                          )}
+                {results.map((p) => (
+                  <tr key={p.rank} className="border-t border-border align-top">
+                    <td className="px-4 py-4 font-semibold text-muted-foreground">{p.rank}</td>
+                    <td className="px-4 py-4 font-semibold text-foreground">{p.name}</td>
+                    <td className="px-4 py-4 text-muted-foreground">{p.country}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">{p.volume}</span>
+                        {p.belowTarget && (
+                          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-800">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            Below target
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 max-w-md text-foreground/80">
+                      <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
+                        <Sparkles className="h-2.5 w-2.5" /> AI
+                      </span>
+                      {p.insight}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full ${bandBarColor(p.band)}`}
+                            style={{ width: `${p.fit ?? 0}%` }}
+                          />
                         </div>
-                      </td>
-                      <td className="px-4 py-4 max-w-md text-foreground/80">
-                        <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                          <Sparkles className="h-2.5 w-2.5" /> AI
+                        <span className={`text-sm font-semibold ${bandTextColor(p.band)}`}>
+                          {p.fit ?? "—"}
                         </span>
-                        {p.insight}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-                            <div className={`h-full ${fitColor(p.fit, cfg)}`} style={{ width: `${p.fit}%` }} />
-                          </div>
-                          <span className={`text-sm font-semibold ${fitTextColor(p.fit, cfg)}`}>{p.fit}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <Link
-                          to="/stage-3"
-                          search={{ company: p.name }}
-                          className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <Link
+                        to="/stage-3"
+                        search={{ company: p.name }}
+                        className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </section>
