@@ -4,56 +4,55 @@ import { Sparkles, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
-import { loadJSON, saveJSON, priceKey } from "@/lib/store";
+import { loadJSON, saveJSON, riskKey } from "@/lib/store";
 
-const WEBHOOK_URL = "http://localhost:5678/webhook/price";
+const WEBHOOK_URL = "http://localhost:5678/webhook/risk";
 
-export const Route = createFileRoute("/stage-5")({
+export const Route = createFileRoute("/stage-6")({
   validateSearch: (search: Record<string, unknown>) => ({
     company: typeof search.company === "string" ? search.company : "",
   }),
   head: () => ({
     meta: [
-      { title: "Stage 5 — Pricing | SEE Origination Hub" },
-      { name: "description", content: "Value the storage swing as a spread option." },
+      { title: "Stage 6 — Risk & Credit | SEE Origination Hub" },
+      { name: "description", content: "Assess risk and counterparty credit." },
     ],
   }),
-  component: Stage5,
+  component: Stage6,
 });
 
 type Line = { label: string; value: string };
-type Pricing = {
+type Risk = {
   company: string;
-  currency: string;
-  lines: Line[];
-  grossMargin: number;
-  narrative: { drivers: string; sensitivity: string; caveat: string };
+  rating: string;
+  register: Line[];
+  narrative: { riskSummary: string; creditView: string; mitigants: string; kycNote: string };
 };
 
 const eur = (n: number) => "€" + Math.round(n).toLocaleString();
 
-function Stage5() {
+function Stage6() {
   const { company } = Route.useSearch();
   const [cfg] = useConfig();
   const prospect = findProspect(company);
 
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
-  const [pricing, setPricing] = useState<Pricing | null>(null);
+  const [risk, setRisk] = useState<Risk | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!company) return;
-    const cached = loadJSON<Pricing>(priceKey(company));
+    const cached = loadJSON<Risk>(riskKey(company));
     if (cached) {
-      setPricing(cached);
+      setRisk(cached);
       setStatus("done");
     } else {
       setStatus("idle");
-      setPricing(null);
+      setRisk(null);
     }
   }, [company]);
 
-  const runPrice = async () => {
+  const runRisk = async () => {
     if (!prospect) return;
     const fullConfig = readConfig();
     setStatus("loading");
@@ -65,40 +64,36 @@ function Stage5() {
         body: JSON.stringify({ config: fullConfig, prospect }),
       });
       if (!res.ok) throw new Error(`Workflow returned HTTP ${res.status}`);
-      const data = (await res.json()) as Pricing;
-      setPricing(data);
-      saveJSON(priceKey(company), data);
+      const data = (await res.json()) as Risk;
+      setRisk(data);
+      saveJSON(riskKey(company), data);
       setStatus("done");
     } catch (e) {
-      // Deterministic fallback valuation (same maths as the workflow).
       const annual = prospect.volumeGWh;
-      const swing = Math.round(annual * 0.2);
-      const base = annual - swing;
-      const spread = 4.2;
-      const intrinsic = swing * 1000 * spread;
-      const extrinsic = intrinsic * 0.25;
-      const supply = base * 1000 * 0.3;
-      const gross = intrinsic + extrinsic + supply;
-      const fallback: Pricing = {
+      const cv = annual * 1000 * 30;
+      const collateralPct = prospect.credit >= 85 ? 0.05 : prospect.credit >= 70 ? 0.12 : 0.2;
+      const rating =
+        prospect.credit >= 85 ? "Strong (A)" : prospect.credit >= 70 ? "Adequate (BBB)" : prospect.credit >= 60 ? "Watch (BB)" : "Weak (B)";
+      const fallback: Risk = {
         company: prospect.name,
-        currency: "EUR",
-        grossMargin: gross,
-        lines: [
-          { label: `Seasonal spread (${cfg.market.hub} S/W)`, value: `€${spread.toFixed(2)}/MWh` },
-          { label: "Storage swing volume", value: `${swing.toLocaleString()} GWh` },
-          { label: "Intrinsic storage value", value: eur(intrinsic) },
-          { label: "Extrinsic (optionality, ~25%)", value: eur(extrinsic) },
-          { label: "Supply baseload margin", value: eur(supply) },
-          { label: "Indicative gross margin", value: eur(gross) },
+        rating,
+        register: [
+          { label: "Credit rating (indicative)", value: rating },
+          { label: "Annual contract value", value: eur(cv) },
+          { label: "Recommended collateral / PCG", value: `${eur(cv * collateralPct)} (${Math.round(collateralPct * 100)}%)` },
+          { label: "Volumetric / swing risk", value: "~20% of volume is seasonal swing" },
+          { label: "Basis risk", value: `${cfg.market.hub} delivery point` },
+          { label: "Shape risk", value: "Winter-weighted withdrawal profile" },
         ],
         narrative: {
-          drivers: "AI narrative unavailable (workflow not reachable).",
-          sensitivity: "AI narrative unavailable.",
-          caveat: "AI narrative unavailable.",
+          riskSummary: "AI narrative unavailable (workflow not reachable).",
+          creditView: "AI narrative unavailable.",
+          mitigants: "AI narrative unavailable.",
+          kycNote: "AI narrative unavailable.",
         },
       };
-      setPricing(fallback);
-      saveJSON(priceKey(company), fallback);
+      setRisk(fallback);
+      saveJSON(riskKey(company), fallback);
       setError((e as Error).message ?? "unknown error");
       setStatus("done");
     }
@@ -106,18 +101,18 @@ function Stage5() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader stageLabel="Stage 5 of 9" current={5} />
+      <AppHeader stageLabel="Stage 6 of 9" current={6} />
 
       <main className="mx-auto max-w-5xl px-6 py-10">
         <span className="text-xs font-semibold uppercase tracking-wider text-accent">
-          Pricing &amp; valuation
+          Risk &amp; credit
         </span>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Value the deal
+          Assess risk &amp; credit
         </h1>
         <p className="mt-3 max-w-2xl text-base text-muted-foreground">
-          Value the storage swing as a summer–winter spread option against the seasonal
-          curve. Figures are computed deterministically; AI narrates the result.
+          Review volumetric, basis and shape risk, indicative credit standing and collateral,
+          with an AI risk summary and a KYC note.
         </p>
 
         {!prospect && (
@@ -132,50 +127,42 @@ function Stage5() {
               <div className="text-sm">
                 <span className="font-semibold text-foreground">{prospect.name}</span>
                 <span className="text-muted-foreground">
-                  {" "}· {prospect.volumeGWh.toLocaleString()} GWh/yr · {cfg.market.hub}
+                  {" "}· credit {prospect.credit}/100 · {prospect.volumeGWh.toLocaleString()} GWh/yr
                 </span>
               </div>
               <button
-                onClick={runPrice}
+                onClick={runRisk}
                 disabled={status === "loading"}
                 className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
               >
                 {status === "loading" && <Loader2 className="h-4 w-4 animate-spin" />}
                 <Sparkles className="h-4 w-4" />
-                {pricing ? "Re-value" : "Run valuation"}
+                {risk ? "Re-assess" : "Run risk & credit check"}
               </button>
             </div>
 
             {status === "loading" && (
               <p className="mt-6 text-sm text-muted-foreground">
-                Computing intrinsic + extrinsic value and drafting the narrative…
+                Computing exposure and drafting the risk assessment…
               </p>
             )}
 
-            {status === "done" && pricing && (
+            {status === "done" && risk && (
               <div className="mt-6 grid gap-6 md:grid-cols-5">
                 <section className="md:col-span-3 overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                   <div className="border-b border-border bg-secondary/60 px-4 py-3">
-                    <h2 className="text-sm font-semibold text-foreground">Valuation breakdown</h2>
+                    <h2 className="text-sm font-semibold text-foreground">Risk &amp; credit register</h2>
                   </div>
                   <table className="w-full text-sm">
                     <tbody>
-                      {pricing.lines.map((l) => {
-                        const total = l.label.toLowerCase().includes("gross margin");
-                        return (
-                          <tr
-                            key={l.label}
-                            className={`border-t border-border first:border-t-0 ${total ? "bg-secondary/40" : ""}`}
-                          >
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              {l.label}
-                            </th>
-                            <td className={`px-4 py-3 text-right ${total ? "text-base font-bold text-foreground" : "font-medium text-foreground/90"}`}>
-                              {l.value}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {risk.register.map((l) => (
+                        <tr key={l.label} className="border-t border-border first:border-t-0">
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {l.label}
+                          </th>
+                          <td className="px-4 py-3 text-right font-medium text-foreground/90">{l.value}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </section>
@@ -183,7 +170,7 @@ function Stage5() {
                 <section className="md:col-span-2 overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                   <div className="flex items-center gap-1.5 border-b border-border bg-secondary/60 px-4 py-3">
                     <Sparkles className="h-3.5 w-3.5 text-accent" />
-                    <h2 className="text-sm font-semibold text-foreground">AI valuation narrative</h2>
+                    <h2 className="text-sm font-semibold text-foreground">AI risk assessment</h2>
                   </div>
                   <div className="space-y-4 p-4 text-sm">
                     {error && (
@@ -192,31 +179,30 @@ function Stage5() {
                         AI narrative unavailable. ({error})
                       </div>
                     )}
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Value drivers</div>
-                      <p className="mt-1 text-foreground/90">{pricing.narrative.drivers}</p>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key sensitivity</div>
-                      <p className="mt-1 text-foreground/90">{pricing.narrative.sensitivity}</p>
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assumption caveat</div>
-                      <p className="mt-1 text-foreground/90">{pricing.narrative.caveat}</p>
-                    </div>
+                    {[
+                      ["Overall risk", risk.narrative.riskSummary],
+                      ["Credit view", risk.narrative.creditView],
+                      ["Recommended mitigants", risk.narrative.mitigants],
+                      ["KYC note", risk.narrative.kycNote],
+                    ].map(([label, val]) => (
+                      <div key={label}>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+                        <p className="mt-1 text-foreground/90">{val}</p>
+                      </div>
+                    ))}
                   </div>
                 </section>
               </div>
             )}
 
-            {status === "done" && pricing && (
+            {status === "done" && risk && (
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link
-                  to="/stage-6"
+                  to="/stage-7"
                   search={{ company: prospect.name }}
                   className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                 >
-                  Proceed to risk &amp; credit
+                  Proceed to contracting
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -226,11 +212,11 @@ function Stage5() {
 
         <div className="mt-10">
           <Link
-            to="/stage-4"
+            to="/stage-5"
             search={{ company }}
             className="text-sm text-muted-foreground hover:text-foreground"
           >
-            ← Back to structuring
+            ← Back to pricing
           </Link>
         </div>
       </main>
