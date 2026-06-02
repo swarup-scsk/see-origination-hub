@@ -19,7 +19,7 @@ function Stage4() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader stageLabel="Stage 4 of 9" />
+      <AppHeader stageLabel="Stage 4 of 9" current={4} />
 
       <main className="mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center">
         <span className="mb-4 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">

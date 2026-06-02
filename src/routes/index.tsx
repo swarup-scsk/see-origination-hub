@@ -274,7 +274,7 @@ function ScopeBar() {
 function Index() {
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader stageLabel="Stage 1 of 9" />
+      <AppHeader stageLabel="Stage 1 of 9" current={1} />
 
       <main className="mx-auto max-w-7xl px-6 py-10">
         <ScopeBar />

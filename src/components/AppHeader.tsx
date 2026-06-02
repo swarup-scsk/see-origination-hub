@@ -1,18 +1,21 @@
 import { Link } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
 import { useConfig, scopeSubtitle } from "@/lib/config";
+import { Stepper } from "@/components/Stepper";
 
 type Props = {
   stageLabel?: string;
   subtitleOverride?: string;
+  current?: number;
 };
 
-export function AppHeader({ stageLabel, subtitleOverride }: Props) {
+export function AppHeader({ stageLabel, subtitleOverride, current }: Props) {
   const [cfg] = useConfig();
   const subtitle = subtitleOverride ?? scopeSubtitle(cfg);
 
   return (
-    <header className="border-b border-border bg-card">
+    <>
+      <header className="border-b border-border bg-card">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
         <Link to="/" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -41,6 +44,8 @@ export function AppHeader({ stageLabel, subtitleOverride }: Props) {
           </Link>
         </div>
       </div>
-    </header>
+      </header>
+      {current ? <Stepper current={current} /> : null}
+    </>
   );
 }

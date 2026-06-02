@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Loader2, AlertTriangle, CheckCircle2, PauseCircle } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
+import { loadJSON, saveJSON, qualKey } from "@/lib/store";
 
 const WEBHOOK_URL = "http://localhost:5678/webhook/qualify";
 
@@ -21,12 +22,17 @@ export const Route = createFileRoute("/stage-3")({
 });
 
 type Qualification = {
+  company: string;
   recommendation: "Proceed" | "Hold" | "Decline";
   rationale: string;
-  brief: string;
   fit: number;
-  indicativeSwingGWh: number;
+  fitGreen: number;
+  fitAmber: number;
+  volumeGWh: number;
+  minVol: number;
   targetMet: boolean;
+  indicativeSwingGWh: number;
+  assessment: { demandFit: string; sizing: string; keyRisk: string };
 };
 
 function Attribute({ label, value }: { label: string; value: number }) {
@@ -50,6 +56,20 @@ function recBadge(rec: Qualification["recommendation"]) {
   return "bg-rose-100 text-rose-800";
 }
 
+function Row({ label, children, ai }: { label: string; children: React.ReactNode; ai?: boolean }) {
+  return (
+    <tr className="border-t border-border align-top">
+      <th className="w-44 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          {ai && <Sparkles className="h-3 w-3 text-accent" />}
+          {label}
+        </span>
+      </th>
+      <td className="px-4 py-3 text-sm text-foreground/90">{children}</td>
+    </tr>
+  );
+}
+
 function Stage3() {
   const { company } = Route.useSearch();
   const [cfg] = useConfig();
@@ -58,6 +78,19 @@ function Stage3() {
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [qual, setQual] = useState<Qualification | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Restore a previously generated assessment for this counterparty.
+  useEffect(() => {
+    if (!company) return;
+    const cached = loadJSON<Qualification>(qualKey(company));
+    if (cached) {
+      setQual(cached);
+      setStatus("done");
+    } else {
+      setStatus("idle");
+      setQual(null);
+    }
+  }, [company]);
 
   const runQualify = async () => {
     if (!prospect) return;
@@ -71,28 +104,37 @@ function Stage3() {
         body: JSON.stringify({ config: fullConfig, prospect }),
       });
       if (!res.ok) throw new Error(`Workflow returned HTTP ${res.status}`);
-      const data = await res.json();
-      setQual(data as Qualification);
+      const data = (await res.json()) as Qualification;
+      setQual(data);
+      saveJSON(qualKey(company), data);
       setStatus("done");
     } catch (e) {
-      // Fallback: compute the deterministic parts locally, leave the brief as a note.
       const minVol = fullConfig.prospects.minVolumeGWh;
-      const fit =
-        fullConfig.prospects.fitGreen <= prospect.swing ? prospect.swing : prospect.swing;
       const targetMet = prospect.volumeGWh >= minVol;
       const rec: Qualification["recommendation"] = !targetMet
         ? "Hold"
         : prospect.swing >= 80
           ? "Proceed"
           : "Hold";
-      setQual({
+      const fallback: Qualification = {
+        company: prospect.name,
         recommendation: rec,
         rationale: "Computed locally — AI brief unavailable (workflow not reachable).",
-        brief: "AI qualification brief pending.",
-        fit,
-        indicativeSwingGWh: Math.round(prospect.volumeGWh * 0.2),
+        fit: prospect.swing,
+        fitGreen: fullConfig.prospects.fitGreen,
+        fitAmber: fullConfig.prospects.fitAmber,
+        volumeGWh: prospect.volumeGWh,
+        minVol,
         targetMet,
-      });
+        indicativeSwingGWh: Math.round(prospect.volumeGWh * 0.2),
+        assessment: {
+          demandFit: "Pending — AI workflow not reachable.",
+          sizing: "Pending — AI workflow not reachable.",
+          keyRisk: "Pending — AI workflow not reachable.",
+        },
+      };
+      setQual(fallback);
+      saveJSON(qualKey(company), fallback);
       setError((e as Error).message ?? "unknown error");
       setStatus("done");
     }
@@ -100,7 +142,7 @@ function Stage3() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader stageLabel="Stage 3 of 9" />
+      <AppHeader stageLabel="Stage 3 of 9" current={3} />
 
       <main className="mx-auto max-w-5xl px-6 py-10">
         <div className="mb-2 flex items-center gap-2">
@@ -187,35 +229,51 @@ function Stage3() {
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${recBadge(qual.recommendation)}`}>
-                      {qual.recommendation}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Indicative swing volume:{" "}
-                      <span className="font-semibold text-foreground">
-                        ~{qual.indicativeSwingGWh.toLocaleString()} GWh
-                      </span>
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {qual.targetMet ? "Meets volume target" : "Below volume target"}
-                    </span>
-                  </div>
-
-                  <div className="rounded-md bg-secondary/50 p-4">
-                    <div className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent">
-                      <Sparkles className="h-3 w-3" /> AI assessment
-                    </div>
-                    <p className="text-sm leading-relaxed text-foreground/90">{qual.brief}</p>
-                    {qual.rationale && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        <span className="font-semibold">Recommendation basis:</span> {qual.rationale}
-                      </p>
-                    )}
+                  {/* Structured assessment table */}
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <table className="w-full">
+                      <tbody>
+                        <Row label="Recommendation">
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${recBadge(qual.recommendation)}`}>
+                            {qual.recommendation}
+                          </span>
+                        </Row>
+                        <Row label="Recommendation basis">
+                          <span className="text-muted-foreground">{qual.rationale}</span>
+                        </Row>
+                        <Row label="Fit score">
+                          <span className="font-semibold">{qual.fit}</span>{" "}
+                          <span className="text-muted-foreground">
+                            (green ≥ {qual.fitGreen} · amber ≥ {qual.fitAmber})
+                          </span>
+                        </Row>
+                        <Row label="Volume vs target">
+                          <span className="font-semibold">
+                            {qual.volumeGWh.toLocaleString()} GWh
+                          </span>{" "}
+                          <span className="text-muted-foreground">
+                            (target ≥ {qual.minVol.toLocaleString()} —{" "}
+                            {qual.targetMet ? "met" : "below"})
+                          </span>
+                        </Row>
+                        <Row label="Indicative swing">
+                          ~{qual.indicativeSwingGWh.toLocaleString()} GWh
+                        </Row>
+                        <Row label="Demand-profile fit" ai>
+                          {qual.assessment?.demandFit}
+                        </Row>
+                        <Row label="Indicative sizing" ai>
+                          {qual.assessment?.sizing}
+                        </Row>
+                        <Row label="Key risk" ai>
+                          {qual.assessment?.keyRisk}
+                        </Row>
+                      </tbody>
+                    </table>
                   </div>
 
                   {/* Go / No-go */}
-                  <div className="flex flex-wrap gap-3 pt-2">
+                  <div className="flex flex-wrap gap-3 pt-1">
                     <Link
                       to="/stage-4"
                       search={{ company: prospect.name }}

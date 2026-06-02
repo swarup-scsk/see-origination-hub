@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, Loader2, AlertTriangle } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { PROSPECTS } from "@/lib/prospects";
+import { loadJSON, saveJSON, SCAN_KEY } from "@/lib/store";
 
 export const Route = createFileRoute("/stage-2")({
   head: () => ({
@@ -57,6 +58,15 @@ function Stage2() {
   const [error, setError] = useState<string | null>(null);
   const [cfg] = useConfig();
 
+  // Restore a previous scan so navigating back doesn't re-call the workflow.
+  useEffect(() => {
+    const cached = loadJSON<Result[]>(SCAN_KEY);
+    if (cached && cached.length > 0) {
+      setResults(cached);
+      setStatus("done");
+    }
+  }, []);
+
   const runScan = async () => {
     const fullConfig = readConfig();
     // eslint-disable-next-line no-console
@@ -75,6 +85,7 @@ function Stage2() {
       const list: Result[] = Array.isArray(data?.prospects) ? data.prospects : [];
       if (list.length === 0) throw new Error("Workflow returned no prospects");
       setResults(list);
+      saveJSON(SCAN_KEY, list);
       setStatus("done");
     } catch (e) {
       // Graceful fallback: show prospects with no score and a neutral note.
@@ -98,7 +109,7 @@ function Stage2() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader stageLabel="Stage 2 of 9" />
+      <AppHeader stageLabel="Stage 2 of 9" current={2} />
 
       <main className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-2 flex items-center gap-2">
