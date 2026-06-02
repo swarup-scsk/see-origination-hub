@@ -25,3 +25,5 @@ export const qualKey = (company: string) => `see.qual.v1.${company}`;
 export const structKey = (company: string) => `see.struct.v1.${company}`;
 export const priceKey = (company: string) => `see.price.v1.${company}`;
 export const riskKey = (company: string) => `see.risk.v1.${company}`;
+export const contractKey = (company: string) => `see.contract.v1.${company}`;
+export const captureKey = (company: string) => `see.capture.v1.${company}`;
