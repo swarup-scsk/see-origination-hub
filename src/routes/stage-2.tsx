@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Sparkles, Loader2, AlertTriangle } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
+import { PROSPECTS } from "@/lib/prospects";
 
 export const Route = createFileRoute("/stage-2")({
   head: () => ({
@@ -22,24 +23,8 @@ export const Route = createFileRoute("/stage-2")({
 // n8n scores deterministically and Gemma writes each insight.
 const WEBHOOK_URL = "http://localhost:5678/webhook/prospect-scan";
 
-// Raw prospect attributes only — no fit, no insight. The workflow computes those.
-type InputProspect = {
-  name: string;
-  country: string;
-  volumeGWh: number;
-  swing: number;
-  credit: number;
-  strategic: number;
-};
-
-const INPUT_PROSPECTS: InputProspect[] = [
-  { name: "Westland Greenhouse Energy Co-op", country: "Netherlands", volumeGWh: 1250, swing: 95, credit: 80, strategic: 90 },
-  { name: "Stadswarmte Rotterdam", country: "Netherlands", volumeGWh: 980, swing: 88, credit: 85, strategic: 82 },
-  { name: "Benelux Power & Heat NV", country: "Belgium", volumeGWh: 1600, swing: 78, credit: 68, strategic: 80 },
-  { name: "NorthSea Industrial Gas BV", country: "Netherlands", volumeGWh: 2100, swing: 45, credit: 82, strategic: 65 },
-  { name: "Limburg Regional Supplier", country: "Netherlands", volumeGWh: 540, swing: 85, credit: 70, strategic: 60 },
-  { name: "Antwerp Chemicals Cluster", country: "Belgium", volumeGWh: 3400, swing: 25, credit: 88, strategic: 55 },
-];
+// Raw prospect attributes come from the shared dataset; the workflow computes scores + insights.
+const INPUT_PROSPECTS = PROSPECTS;
 
 // Shape returned by the workflow.
 type Result = {
