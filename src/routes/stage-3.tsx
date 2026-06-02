@@ -275,12 +275,12 @@ function Stage3() {
                   {/* Go / No-go */}
                   <div className="flex flex-wrap gap-3 pt-1">
                     <Link
-                      to="/stage-4"
+                      to="/deal"
                       search={{ company: prospect.name }}
                       className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                     >
                       <CheckCircle2 className="h-4 w-4" />
-                      Proceed to structuring →
+                      Proceed to deal analysis →
                     </Link>
                     <Link
                       to="/stage-2"
