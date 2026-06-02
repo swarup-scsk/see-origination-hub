@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Pencil, X, Info } from "lucide-react";
 import { useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import {
@@ -158,43 +158,75 @@ function ScenarioCard({ s }: { s: Scenario }) {
   );
 }
 
+const HUBS: { code: string; name: string }[] = [
+  { code: "TTF", name: "Title Transfer Facility (Netherlands)" },
+  { code: "THE", name: "Trading Hub Europe (Germany)" },
+  { code: "PEG", name: "Point d'Échange de Gaz (France)" },
+  { code: "PSV", name: "Punto di Scambio Virtuale (Italy)" },
+];
+
 function ScopeBar() {
   const [cfg, setCfg] = useConfig();
   const [editing, setEditing] = useState(false);
+  const [info, setInfo] = useState(false);
+  const hubName = HUBS.find((h) => h.code === cfg.market.hub)?.name ?? "";
 
   if (!editing) {
     return (
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-5 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Market &amp; scope
-          </span>
-          <span>
-            <span className="text-muted-foreground">Commodity:</span>{" "}
-            <span className="font-semibold text-foreground">
-              {cfg.market.commodity}
+      <div className="mb-8 rounded-lg border border-border bg-card px-5 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Market &amp; scope
+              <button
+                onClick={() => setInfo((v) => !v)}
+                aria-label="About market & scope"
+                title="About market & scope"
+                className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </button>
             </span>
-          </span>
-          <span>
-            <span className="text-muted-foreground">Region:</span>{" "}
-            <span className="font-semibold text-foreground">
-              {cfg.market.region}
+            <span>
+              <span className="text-muted-foreground">Commodity:</span>{" "}
+              <span className="font-semibold text-foreground">{cfg.market.commodity}</span>
             </span>
-          </span>
-          <span>
-            <span className="text-muted-foreground">Hub:</span>{" "}
-            <span className="font-semibold text-foreground">
-              {cfg.market.hub}
+            <span>
+              <span className="text-muted-foreground">Region:</span>{" "}
+              <span className="font-semibold text-foreground">{cfg.market.region}</span>
             </span>
-          </span>
-        </div>
-        <button
-          onClick={() => setEditing(true)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        >
+            <span>
+              <span className="text-muted-foreground">Hub:</span>{" "}
+              <span className="font-semibold text-foreground">{cfg.market.hub}</span>
+              <span className="text-muted-foreground"> — {hubName}</span>
+            </span>
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
           <Pencil className="h-3 w-3" />
           Change
         </button>
+        </div>
+
+        {info && (
+          <div className="mt-3 rounded-md border border-border bg-secondary/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="mb-2 text-foreground">
+              <span className="font-semibold">Market &amp; scope</span> sets the commodity, region and
+              pricing hub this origination cycle operates in. It flows through every stage — prospecting,
+              structuring, pricing and risk all read it.
+            </p>
+            <p className="font-semibold text-foreground">European gas hubs</p>
+            <ul className="mt-1 space-y-0.5">
+              {HUBS.map((h) => (
+                <li key={h.code}>
+                  <span className="font-semibold text-foreground">{h.code}</span> — {h.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }
@@ -253,10 +285,11 @@ function ScopeBar() {
               })
             }
           >
-            <option>TTF</option>
-            <option>THE</option>
-            <option>PEG</option>
-            <option>PSV</option>
+            {HUBS.map((h) => (
+              <option key={h.code} value={h.code}>
+                {h.code} — {h.name}
+              </option>
+            ))}
           </select>
         </label>
       </div>

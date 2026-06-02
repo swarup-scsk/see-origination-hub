@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { RotateCcw, Save } from "lucide-react";
+import { RotateCcw, Save, X } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import {
   DEFAULT_CONFIG,
@@ -104,6 +104,7 @@ function SliderRow({
 }
 
 function ConfigPage() {
+  const router = useRouter();
   const [saved, setSaved] = useConfig();
   const [draft, setDraft] = useState<AppConfig>(saved);
 
@@ -135,14 +136,23 @@ function ConfigPage() {
       <AppHeader stageLabel="Configuration" />
 
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Configuration — Business Rules
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            These settings drive the selections, scoring and thresholds across
-            all stages.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Configuration — Business Rules
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              These settings drive the selections, scoring and thresholds across
+              all stages.
+            </p>
+          </div>
+          <button
+            onClick={() => router.history.back()}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <X className="h-4 w-4" />
+            Done
+          </button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

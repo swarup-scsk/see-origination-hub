@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, AlertTriangle, ArrowRight, Check, Circle } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
@@ -210,17 +210,17 @@ function Deal() {
 
   const stepperFor: Record<Tab, number> = { structure: 4, pricing: 5, risk: 6 };
 
-  const TabButton = ({ id, label, st }: { id: Tab; label: string; st: Step }) => (
-    <button
-      onClick={() => setTab(id)}
-      className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-        tab === id ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {st === "loading" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : st === "done" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Circle className="h-3 w-3 text-muted-foreground/40" />}
-      {label}
-    </button>
-  );
+  const TABS: { id: Tab; label: string; icon: typeof Layers; st: Step }[] = [
+    { id: "structure", label: "Structure", icon: Layers, st: sStatus },
+    { id: "pricing", label: "Pricing", icon: Coins, st: pStatus },
+    { id: "risk", label: "Risk & Credit", icon: ShieldCheck, st: rStatus },
+  ];
+
+  const StatusDot = ({ st }: { st: Step }) => {
+    if (st === "loading") return <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500" />;
+    const color = st === "done" ? "bg-emerald-500" : "bg-muted-foreground/30";
+    return <span className={`h-2 w-2 rounded-full ${color}`} />;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -262,11 +262,28 @@ function Deal() {
               </button>
             </div>
 
-            {/* Tabs */}
-            <div className="mt-6 flex gap-2 border-b border-border">
-              <TabButton id="structure" label="Structure" st={sStatus} />
-              <TabButton id="pricing" label="Pricing" st={pStatus} />
-              <TabButton id="risk" label="Risk & Credit" st={rStatus} />
+            {/* Tabs — segmented control */}
+            <div className="mt-6 grid grid-cols-3 gap-2 rounded-xl border border-border bg-secondary/40 p-1.5">
+              {TABS.map((t) => {
+                const active = tab === t.id;
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id)}
+                    className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+                      active
+                        ? "border border-border bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 ${active ? "text-accent" : ""}`} />
+                    <span className="hidden sm:inline">{t.label}</span>
+                    <span className="sm:hidden">{t.label.split(" ")[0]}</span>
+                    <StatusDot st={t.st} />
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mt-6 space-y-6">
