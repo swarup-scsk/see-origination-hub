@@ -11,7 +11,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -78,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Origination SEE" },
+      { name: "description", content: "SEE Origination Hub is a web app prototype for energy trading deal origination." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Origination SEE" },
+      { property: "og:description", content: "SEE Origination Hub is a web app prototype for energy trading deal origination." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Origination SEE" },
+      { name: "twitter:description", content: "SEE Origination Hub is a web app prototype for energy trading deal origination." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5e868acc-3143-45d8-b619-791b79b6bca1/id-preview-4868508a--d785f386-c1c4-45e8-8e6d-49dd38048a38.lovable.app-1780415164857.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5e868acc-3143-45d8-b619-791b79b6bca1/id-preview-4868508a--d785f386-c1c4-45e8-8e6d-49dd38048a38.lovable.app-1780415164857.png" },
     ],
     links: [
       {
@@ -121,7 +124,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
-      <Toaster />
     </QueryClientProvider>
   );
 }
