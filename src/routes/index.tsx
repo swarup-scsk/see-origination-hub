@@ -1,29 +1,207 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Check } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "SEE Origination Hub — Scenario Selection" },
+      {
+        name: "description",
+        content:
+          "Evaluate and select an origination deal scenario for SCEE energy trading.",
+      },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+type Scenario = {
+  id: string;
+  title: string;
+  description: string;
+  ratings: [number, number, number, number, number];
+  tag: "SELECTED" | "Alternative";
+};
+
+const CRITERIA = [
+  "Strategic fit",
+  "Deal complexity",
+  "Data availability",
+  "Demo clarity",
+  "Replicability",
+] as const;
+
+const SCENARIOS: Scenario[] = [
+  {
+    id: "gas-supply-storage",
+    title: "Gas Supply + Storage",
+    description:
+      "Structured gas supply with seasonal swing, backed by storage and transport capacity.",
+    ratings: [5, 5, 5, 4, 5],
+    tag: "SELECTED",
+  },
+  {
+    id: "standalone-storage",
+    title: "Standalone Storage Capacity",
+    description: "Lease and optimise storage as a summer–winter spread option.",
+    ratings: [4, 4, 4, 4, 4],
+    tag: "Alternative",
+  },
+  {
+    id: "flexible-power",
+    title: "Flexible Power Asset",
+    description:
+      "Route-to-market and revenue stacking for a battery or peaker.",
+    ratings: [5, 4, 5, 3, 4],
+    tag: "Alternative",
+  },
+  {
+    id: "corporate-ppa",
+    title: "Corporate PPA",
+    description: "Renewable offtake sleeved to a corporate buyer.",
+    ratings: [3, 3, 4, 4, 3],
+    tag: "Alternative",
+  },
+  {
+    id: "gas-producer-lng",
+    title: "Gas Producer / LNG",
+    description: "Cargo and regas into the supply chain.",
+    ratings: [3, 4, 3, 3, 3],
+    tag: "Alternative",
+  },
+];
+
+function RatingBar({ value }: { value: number }) {
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          key={i}
+          className={`h-1.5 w-4 rounded-sm ${
+            i <= value ? "bg-accent" : "bg-border"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ScenarioCard({ s }: { s: Scenario }) {
+  const selected = s.tag === "SELECTED";
   return (
     <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
+      className={`relative flex flex-col rounded-xl border bg-card p-6 transition-shadow ${
+        selected
+          ? "border-accent shadow-lg ring-2 ring-accent/30"
+          : "border-border shadow-sm hover:shadow-md"
+      }`}
     >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <h3 className="text-lg font-semibold leading-tight text-foreground">
+          {s.title}
+        </h3>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide ${
+            selected
+              ? "bg-accent text-accent-foreground"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {selected && <Check className="mr-1 inline h-3 w-3" />}
+          {s.tag}
+        </span>
+      </div>
+
+      <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
+        {s.description}
+      </p>
+
+      <dl className="mb-6 space-y-2">
+        {CRITERIA.map((c, i) => (
+          <div
+            key={c}
+            className="flex items-center justify-between text-xs"
+          >
+            <dt className="text-muted-foreground">{c}</dt>
+            <dd className="flex items-center gap-2">
+              <RatingBar value={s.ratings[i]} />
+              <span className="w-4 text-right font-medium text-foreground">
+                {s.ratings[i]}
+              </span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-auto">
+        {selected ? (
+          <Link
+            to="/stage-2"
+            className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Begin this deal →
+          </Link>
+        ) : (
+          <button
+            disabled
+            className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-md bg-muted px-4 py-2.5 text-sm font-medium text-muted-foreground"
+          >
+            Not selected
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Index() {
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border bg-card">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <span className="text-sm font-bold">SEE</span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-foreground">
+                SEE Origination Hub
+              </div>
+              <div className="text-xs text-muted-foreground">
+                SCEE Energy Trading
+              </div>
+            </div>
+          </div>
+          <div className="text-xs font-medium text-muted-foreground">
+            Stage 1 of 6 — Scenario Selection
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-6 py-12">
+        <div className="mb-10 max-w-3xl">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Choose an origination scenario
+          </h1>
+          <p className="mt-3 text-base text-muted-foreground">
+            We evaluated five candidate deal types against five criteria and
+            selected the strongest fit for SCEE.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {SCENARIOS.map((s) => (
+            <ScenarioCard key={s.id} s={s} />
+          ))}
+        </div>
+
+        <div className="mt-10 rounded-lg border-l-4 border-accent bg-secondary/60 px-5 py-4">
+          <p className="text-sm text-foreground">
+            <span className="font-semibold">Selected:</span> Gas Supply +
+            Storage — highest combined fit, complexity and replicability.
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
