@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AppHeader } from "@/components/AppHeader";
+
 
 export const Route = createFileRoute("/stage-3")({
   validateSearch: (search: Record<string, unknown>) => ({
