@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
+import { useState } from "react";
+import { AppHeader } from "@/components/AppHeader";
+import {
+  useConfig,
+  type Commodity,
+  type Hub,
+  type Region,
+} from "@/lib/config";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,8 +58,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "flexible-power",
     title: "Flexible Power Asset",
-    description:
-      "Route-to-market and revenue stacking for a battery or peaker.",
+    description: "Route-to-market and revenue stacking for a battery or peaker.",
     ratings: [5, 4, 5, 3, 4],
     tag: "Alternative",
   },
@@ -118,10 +125,7 @@ function ScenarioCard({ s }: { s: Scenario }) {
 
       <dl className="mb-6 space-y-2">
         {CRITERIA.map((c, i) => (
-          <div
-            key={c}
-            className="flex items-center justify-between text-xs"
-          >
+          <div key={c} className="flex items-center justify-between text-xs">
             <dt className="text-muted-foreground">{c}</dt>
             <dd className="flex items-center gap-2">
               <RatingBar value={s.ratings[i]} />
@@ -154,31 +158,127 @@ function ScenarioCard({ s }: { s: Scenario }) {
   );
 }
 
+function ScopeBar() {
+  const [cfg, setCfg] = useConfig();
+  const [editing, setEditing] = useState(false);
+
+  if (!editing) {
+    return (
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-5 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Market &amp; scope
+          </span>
+          <span>
+            <span className="text-muted-foreground">Commodity:</span>{" "}
+            <span className="font-semibold text-foreground">
+              {cfg.market.commodity}
+            </span>
+          </span>
+          <span>
+            <span className="text-muted-foreground">Region:</span>{" "}
+            <span className="font-semibold text-foreground">
+              {cfg.market.region}
+            </span>
+          </span>
+          <span>
+            <span className="text-muted-foreground">Hub:</span>{" "}
+            <span className="font-semibold text-foreground">
+              {cfg.market.hub}
+            </span>
+          </span>
+        </div>
+        <button
+          onClick={() => setEditing(true)}
+          className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          <Pencil className="h-3 w-3" />
+          Change
+        </button>
+      </div>
+    );
+  }
+
+  const selectCls =
+    "rounded-md border border-input bg-background px-2.5 py-1.5 text-sm text-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-accent/40";
+
+  return (
+    <div className="mb-8 flex flex-wrap items-end justify-between gap-3 rounded-lg border border-accent/40 bg-card px-5 py-3 shadow-sm">
+      <div className="flex flex-wrap items-end gap-4">
+        <label className="flex flex-col gap-1 text-xs">
+          <span className="font-medium text-muted-foreground">Commodity</span>
+          <select
+            className={selectCls}
+            value={cfg.market.commodity}
+            onChange={(e) =>
+              setCfg({
+                ...cfg,
+                market: {
+                  ...cfg.market,
+                  commodity: e.target.value as Commodity,
+                },
+              })
+            }
+          >
+            <option>Gas</option>
+            <option>Power</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs">
+          <span className="font-medium text-muted-foreground">Region</span>
+          <select
+            className={selectCls}
+            value={cfg.market.region}
+            onChange={(e) =>
+              setCfg({
+                ...cfg,
+                market: { ...cfg.market, region: e.target.value as Region },
+              })
+            }
+          >
+            <option>Northwest Europe</option>
+            <option>Southern Europe</option>
+            <option>Central &amp; Eastern Europe</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs">
+          <span className="font-medium text-muted-foreground">Hub</span>
+          <select
+            className={selectCls}
+            value={cfg.market.hub}
+            onChange={(e) =>
+              setCfg({
+                ...cfg,
+                market: { ...cfg.market, hub: e.target.value as Hub },
+              })
+            }
+          >
+            <option>TTF</option>
+            <option>THE</option>
+            <option>PEG</option>
+            <option>PSV</option>
+          </select>
+        </label>
+      </div>
+      <button
+        onClick={() => setEditing(false)}
+        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        <X className="h-3 w-3" />
+        Done
+      </button>
+    </div>
+  );
+}
+
 function Index() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">SEE</span>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-foreground">
-                SEE Origination Hub
-              </div>
-              <div className="text-xs text-muted-foreground">
-                SCEE Energy Trading
-              </div>
-            </div>
-          </div>
-          <div className="text-xs font-medium text-muted-foreground">
-            Stage 1 of 6 — Scenario Selection
-          </div>
-        </div>
-      </header>
+      <AppHeader stageLabel="Stage 1 of 9" />
 
-      <main className="mx-auto max-w-7xl px-6 py-12">
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <ScopeBar />
+
         <div className="mb-10 max-w-3xl">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Choose an origination scenario
