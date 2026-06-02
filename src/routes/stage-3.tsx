@@ -4,7 +4,7 @@ import { Sparkles, Loader2, AlertTriangle, CheckCircle2, PauseCircle } from "luc
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
-import { loadJSON, saveJSON, qualKey } from "@/lib/store";
+import { loadJSON, saveJSON, qualKey, decisionKey } from "@/lib/store";
 
 const WEBHOOK_URL = "http://localhost:5678/webhook/qualify";
 
@@ -78,6 +78,27 @@ function Stage3() {
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [qual, setQual] = useState<Qualification | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Human decision (decision-support, not auto-decide).
+  type Decision = { decision: "Proceed" | "Hold" | "Decline"; rationale: string; at: string };
+  const [choice, setChoice] = useState<"" | Decision["decision"]>("");
+  const [rationale, setRationale] = useState("");
+  const [recorded, setRecorded] = useState<Decision | null>(null);
+
+  useEffect(() => {
+    if (!company) { setRecorded(null); setChoice(""); setRationale(""); return; }
+    const d = loadJSON<Decision>(decisionKey(company));
+    setRecorded(d);
+    setChoice(d?.decision ?? "");
+    setRationale(d?.rationale ?? "");
+  }, [company]);
+
+  const recordDecision = () => {
+    if (!choice) return;
+    const d: Decision = { decision: choice, rationale: rationale.trim(), at: new Date().toISOString() };
+    saveJSON(decisionKey(company), d);
+    setRecorded(d);
+  };
 
   // Restore a previously generated assessment for this counterparty.
   useEffect(() => {
@@ -189,6 +210,31 @@ function Stage3() {
                 <Attribute label="Creditworthiness" value={prospect.credit} />
                 <Attribute label="Strategic fit" value={prospect.strategic} />
               </div>
+
+              {/* Relationship layer */}
+              <div className="mt-5 border-t border-border pt-4">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Relationship</div>
+                <dl className="mt-2 space-y-1.5 text-sm">
+                  <div><dt className="inline text-muted-foreground">Contact: </dt><dd className="inline text-foreground">{prospect.primaryContact}</dd></div>
+                  <div><dt className="inline text-muted-foreground">Standing: </dt><dd className="inline text-foreground">{prospect.relationship}</dd></div>
+                  <div><dt className="inline text-muted-foreground">Last contact: </dt><dd className="inline text-foreground">{prospect.lastContact}</dd></div>
+                </dl>
+              </div>
+
+              {/* Provenance */}
+              <div className="mt-4 border-t border-border pt-4">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Evidence behind the estimates
+                </div>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {prospect.dataSources.map((d) => (
+                    <li key={d} className="flex items-start gap-1.5">
+                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </section>
 
             {/* Qualification panel */}
@@ -233,12 +279,13 @@ function Stage3() {
                   <div className="overflow-hidden rounded-lg border border-border">
                     <table className="w-full">
                       <tbody>
-                        <Row label="Recommendation">
+                        <Row label="AI suggestion">
                           <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${recBadge(qual.recommendation)}`}>
                             {qual.recommendation}
                           </span>
+                          <span className="ml-2 text-xs text-muted-foreground">decision-support only — yours to decide</span>
                         </Row>
-                        <Row label="Recommendation basis">
+                        <Row label="Suggestion basis">
                           <span className="text-muted-foreground">{qual.rationale}</span>
                         </Row>
                         <Row label="Fit score">
@@ -272,22 +319,74 @@ function Stage3() {
                     </table>
                   </div>
 
-                  {/* Go / No-go */}
-                  <div className="flex flex-wrap gap-3 pt-1">
-                    <Link
-                      to="/deal"
-                      search={{ company: prospect.name }}
-                      className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Proceed to deal analysis →
-                    </Link>
+                  {/* Human decision capture */}
+                  <div className="rounded-lg border border-border bg-secondary/30 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Your decision
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(["Proceed", "Hold", "Decline"] as const).map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => setChoice(opt)}
+                          className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                            choice === opt
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={rationale}
+                      onChange={(e) => setRationale(e.target.value)}
+                      placeholder="Rationale (captured to the audit trail)…"
+                      rows={2}
+                      className="mt-3 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+                    />
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={recordDecision}
+                        disabled={!choice}
+                        className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Record decision
+                      </button>
+                      {recorded && (
+                        <span className="text-xs text-muted-foreground">
+                          Recorded: <span className="font-semibold text-foreground">{recorded.decision}</span> ·{" "}
+                          {new Date(recorded.at).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Forward navigation gated on the recorded decision */}
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    {recorded?.decision === "Proceed" && (
+                      <Link
+                        to="/deal"
+                        search={{ company: prospect.name }}
+                        className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Proceed to deal analysis →
+                      </Link>
+                    )}
+                    {recorded && recorded.decision !== "Proceed" && (
+                      <span className="text-sm text-muted-foreground">
+                        Marked “{recorded.decision}”. Re-decide above to take it forward, or
+                      </span>
+                    )}
                     <Link
                       to="/stage-2"
                       className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       <PauseCircle className="h-4 w-4" />
-                      Park / pick another
+                      Back to pipeline
                     </Link>
                   </div>
                 </div>

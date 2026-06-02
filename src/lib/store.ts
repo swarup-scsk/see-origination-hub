@@ -27,3 +27,5 @@ export const priceKey = (company: string) => `see.price.v1.${company}`;
 export const riskKey = (company: string) => `see.risk.v1.${company}`;
 export const contractKey = (company: string) => `see.contract.v1.${company}`;
 export const captureKey = (company: string) => `see.capture.v1.${company}`;
+export const decisionKey = (company: string) => `see.decision.v1.${company}`;
+export const approvalsKey = (company: string) => `see.approvals.v1.${company}`;
