@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { AppHeader } from "@/components/AppHeader";
+
 
 export const Route = createFileRoute("/stage-3")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -18,24 +20,7 @@ function Stage3() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">SEE</span>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-foreground">SEE Origination Hub</div>
-              <div className="text-xs text-muted-foreground">
-                Gas Supply + Storage · Northwest Europe
-              </div>
-            </div>
-          </Link>
-          <div className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-            Stage 3 of 9
-          </div>
-        </div>
-      </header>
+      <AppHeader stageLabel="Stage 3 of 9" />
 
       <main className="mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center">
         <span className="mb-4 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
