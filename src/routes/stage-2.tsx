@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { Sparkles, Loader2, AlertTriangle } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
-import { PROSPECTS } from "@/lib/prospects";
+import { PROSPECTS, findProspect } from "@/lib/prospects";
 import { loadJSON, saveJSON, SCAN_KEY } from "@/lib/store";
+import { financialGate, eur } from "@/lib/economics";
 
 export const Route = createFileRoute("/stage-2")({
   head: () => ({
@@ -152,6 +153,14 @@ function Stage2() {
               ≥ {cfg.prospects.fitAmber}
             </span>
           </span>
+          {cfg.financialGate.enabled && (
+            <span>
+              Return gate:{" "}
+              <span className="font-semibold text-rose-700">
+                hard-reject &lt; {eur(cfg.financialGate.minGrossMarginEur)} margin
+              </span>
+            </span>
+          )}
         </div>
 
         {/* Market signals */}
@@ -230,10 +239,23 @@ function Stage2() {
                 </tr>
               </thead>
               <tbody>
-                {results.map((p) => (
-                  <tr key={p.rank} className="border-t border-border align-top">
+                {results.map((p) => {
+                  const pr = findProspect(p.name);
+                  const gate = pr
+                    ? financialGate(pr.volumeGWh, cfg.market.hub, cfg.financialGate)
+                    : { pass: true, margin: 0, hurdle: 0, enabled: false };
+                  const rejected = !gate.pass;
+                  return (
+                  <tr key={p.rank} className={`border-t border-border align-top ${rejected ? "opacity-60" : ""}`}>
                     <td className="px-4 py-4 font-semibold text-muted-foreground">{p.rank}</td>
-                    <td className="px-4 py-4 font-semibold text-foreground">{p.name}</td>
+                    <td className="px-4 py-4 font-semibold text-foreground">
+                      {p.name}
+                      {rejected && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-rose-800">
+                          <AlertTriangle className="h-2.5 w-2.5" /> Below hurdle
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-4 text-muted-foreground">{p.country}</td>
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-1">
@@ -266,16 +288,26 @@ function Stage2() {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <Link
-                        to="/stage-3"
-                        search={{ company: p.name }}
-                        className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                      >
-                        View
-                      </Link>
+                      {rejected ? (
+                        <span
+                          title={`Hard reject — indicative margin ${eur(gate.margin)} below hurdle ${eur(gate.hurdle)}`}
+                          className="inline-flex cursor-not-allowed items-center justify-center rounded-md border border-input bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                        >
+                          Rejected
+                        </span>
+                      ) : (
+                        <Link
+                          to="/stage-3"
+                          search={{ company: p.name }}
+                          className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        >
+                          View
+                        </Link>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </section>

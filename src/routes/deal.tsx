@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck, RotateCcw } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck, RotateCcw, CheckCircle2 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
 import { loadJSON, saveJSON, structKey, priceKey, priceAssumKey, riskKey } from "@/lib/store";
+import { type Assumptions, defaultAssumptions, computePricing, pricingLines, eur } from "@/lib/economics";
 
 const STRUCT_URL = "http://localhost:5678/webhook/structure";
 const PRICE_URL = "http://localhost:5678/webhook/price";
@@ -47,33 +48,6 @@ type Risk = {
 
 type Step = "idle" | "loading" | "done";
 type Tab = "structure" | "pricing" | "risk";
-const eur = (n: number) => "€" + Math.round(n).toLocaleString();
-
-// Editable pricing assumptions — numbers stay deterministic, but the originator controls them.
-type Assumptions = { spread: number; swingPct: number; extrinsicPct: number; supplyMargin: number };
-const HUB_SPREAD: Record<string, number> = { TTF: 4.2, THE: 4.5, PEG: 3.8, PSV: 5.0 };
-function defaultAssumptions(hub: string): Assumptions {
-  return { spread: HUB_SPREAD[hub] ?? 4.2, swingPct: 20, extrinsicPct: 25, supplyMargin: 0.3 };
-}
-function computePricing(volumeGWh: number, a: Assumptions) {
-  const swing = Math.round(volumeGWh * (a.swingPct / 100));
-  const base = volumeGWh - swing;
-  const intrinsic = swing * 1000 * a.spread;
-  const extrinsic = intrinsic * (a.extrinsicPct / 100);
-  const supply = base * 1000 * a.supplyMargin;
-  const gross = intrinsic + extrinsic + supply;
-  return { swing, base, intrinsic, extrinsic, supply, gross };
-}
-function pricingLines(hub: string, a: Assumptions, pv: ReturnType<typeof computePricing>): Line[] {
-  return [
-    { label: `Seasonal spread (${hub} S/W)`, value: `€${a.spread.toFixed(2)}/MWh` },
-    { label: `Storage swing volume (${a.swingPct}%)`, value: `${pv.swing.toLocaleString()} GWh` },
-    { label: "Intrinsic storage value", value: eur(pv.intrinsic) },
-    { label: `Extrinsic (optionality, ${a.extrinsicPct}%)`, value: eur(pv.extrinsic) },
-    { label: `Supply baseload margin (€${a.supplyMargin.toFixed(2)}/MWh)`, value: eur(pv.supply) },
-    { label: "Indicative gross margin", value: eur(pv.gross) },
-  ];
-}
 
 async function post<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -331,6 +305,25 @@ function Deal() {
                     <Card title={`Indicative term sheet — ${structure.structureType}`}>
                       <KvTable rows={structure.legs.map((l) => ({ label: l.component, value: l.detail }))} />
                     </Card>
+                    <Card title="Structuring guardrails">
+                      <div className="space-y-2 p-4 text-sm">
+                        <Guard
+                          ok={2 <= cfg.guardrails.liquidCurveYears}
+                          label="Tenor vs liquid forward curve"
+                          value={`2 gas years vs liquid ${cfg.guardrails.liquidCurveYears}y`}
+                          flag="Beyond liquid curve — pricing / volatility risk"
+                        />
+                        <Guard
+                          ok={assum.swingPct >= cfg.guardrails.minVolumeFlexPct}
+                          label="Volume flexibility"
+                          value={`${assum.swingPct}% swing vs min ${cfg.guardrails.minVolumeFlexPct}%`}
+                          flag="Too rigid — limited optionality to monetise"
+                        />
+                      </div>
+                      <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+                        Soft guardrails — they flag risk for human review, they don't block the deal.
+                      </p>
+                    </Card>
                     <Card title="AI structuring rationale" ai>
                       <AiRows rows={[
                         ["Why this structure", structure.rationale.structureRationale],
@@ -476,6 +469,21 @@ function Warn({ msg }: { msg: string }) {
     <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       AI narrative unavailable — numbers shown are computed from your assumptions. ({msg})
+    </div>
+  );
+}
+
+function Guard({ ok, label, value, flag }: { ok: boolean; label: string; value: string; flag: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="flex items-center gap-2">
+        {ok ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}
+        <span className="text-foreground">{label}</span>
+      </span>
+      <span className="text-right">
+        <span className="block text-foreground/80">{value}</span>
+        {!ok && <span className="block text-xs font-medium text-amber-700">{flag}</span>}
+      </span>
     </div>
   );
 }

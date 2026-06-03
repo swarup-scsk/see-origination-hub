@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
 import { loadJSON, saveJSON, qualKey, decisionKey } from "@/lib/store";
+import { financialGate, eur } from "@/lib/economics";
 
 const WEBHOOK_URL = "http://localhost:5678/webhook/qualify";
 
@@ -74,6 +75,7 @@ function Stage3() {
   const { company } = Route.useSearch();
   const [cfg] = useConfig();
   const prospect = findProspect(company);
+  const gate = prospect ? financialGate(prospect.volumeGWh, cfg.market.hub, cfg.financialGate) : null;
 
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [qual, setQual] = useState<Qualification | null>(null);
@@ -182,6 +184,17 @@ function Stage3() {
         {!prospect && (
           <div className="mt-8 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             No counterparty selected. Go back to prospecting and choose one.
+          </div>
+        )}
+
+        {prospect && gate && !gate.pass && (
+          <div className="mt-6 flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              <span className="font-semibold">Hard reject — below return hurdle.</span> Indicative gross
+              margin {eur(gate.margin)} is under the {eur(gate.hurdle)} financial gate, so this deal can't be
+              progressed. (Adjust the gate in Configuration if this is wrong.)
+            </span>
           </div>
         )}
 
@@ -366,7 +379,7 @@ function Stage3() {
 
                   {/* Forward navigation gated on the recorded decision */}
                   <div className="flex flex-wrap items-center gap-3 pt-1">
-                    {recorded?.decision === "Proceed" && (
+                    {recorded?.decision === "Proceed" && gate?.pass && (
                       <Link
                         to="/deal"
                         search={{ company: prospect.name }}

@@ -359,6 +359,64 @@ function ConfigPage() {
               />
             </Field>
           </Card>
+
+          <Card
+            title="Financial gate"
+            description="The one hard reject — deals whose indicative gross margin is below the hurdle are removed from the shortlist."
+          >
+            <Field label="Enable financial gate">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={draft.financialGate.enabled}
+                onChange={(e) =>
+                  setDraft({ ...draft, financialGate: { ...draft.financialGate, enabled: e.target.checked } })
+                }
+              />
+            </Field>
+            <Field label="Minimum indicative gross margin" hint="€ — hard reject below">
+              <input
+                type="number"
+                min={0}
+                step={50000}
+                className={numberCls}
+                value={draft.financialGate.minGrossMarginEur}
+                onChange={(e) =>
+                  setDraft({ ...draft, financialGate: { ...draft.financialGate, minGrossMarginEur: Number(e.target.value) } })
+                }
+              />
+            </Field>
+          </Card>
+
+          <Card
+            title="Deal guardrails"
+            description="Soft flags raised at structuring — surfaced for human review, they don't block the deal."
+          >
+            <Field label="Liquid forward curve" hint="years">
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className={numberCls}
+                value={draft.guardrails.liquidCurveYears}
+                onChange={(e) =>
+                  setDraft({ ...draft, guardrails: { ...draft.guardrails, liquidCurveYears: Number(e.target.value) } })
+                }
+              />
+            </Field>
+            <Field label="Minimum volume flexibility" hint="% swing">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className={numberCls}
+                value={draft.guardrails.minVolumeFlexPct}
+                onChange={(e) =>
+                  setDraft({ ...draft, guardrails: { ...draft.guardrails, minVolumeFlexPct: Number(e.target.value) } })
+                }
+              />
+            </Field>
+          </Card>
         </div>
 
         <div className="mt-8 flex items-center justify-end gap-3">

@@ -35,6 +35,14 @@ export type AppConfig = {
   compliance: {
     singleDealNotionalAlertEur: number;
   };
+  financialGate: {
+    enabled: boolean;
+    minGrossMarginEur: number;
+  };
+  guardrails: {
+    liquidCurveYears: number;
+    minVolumeFlexPct: number;
+  };
 };
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -58,6 +66,14 @@ export const DEFAULT_CONFIG: AppConfig = {
   },
   compliance: {
     singleDealNotionalAlertEur: 5_000_000,
+  },
+  financialGate: {
+    enabled: true,
+    minGrossMarginEur: 750_000,
+  },
+  guardrails: {
+    liquidCurveYears: 3,
+    minVolumeFlexPct: 10,
   },
 };
 
@@ -90,6 +106,14 @@ export function readConfig(): AppConfig {
       compliance: {
         ...DEFAULT_CONFIG.compliance,
         ...(parsed.compliance ?? {}),
+      },
+      financialGate: {
+        ...DEFAULT_CONFIG.financialGate,
+        ...(parsed.financialGate ?? {}),
+      },
+      guardrails: {
+        ...DEFAULT_CONFIG.guardrails,
+        ...(parsed.guardrails ?? {}),
       },
     };
   } catch {
