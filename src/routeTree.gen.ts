@@ -9,11 +9,49 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as Stage9RouteImport } from './routes/stage-9'
+import { Route as Stage8RouteImport } from './routes/stage-8'
+import { Route as Stage7RouteImport } from './routes/stage-7'
+import { Route as Stage6RouteImport } from './routes/stage-6'
+import { Route as Stage5RouteImport } from './routes/stage-5'
+import { Route as Stage4RouteImport } from './routes/stage-4'
 import { Route as Stage3RouteImport } from './routes/stage-3'
 import { Route as Stage2RouteImport } from './routes/stage-2'
+import { Route as DealsRouteImport } from './routes/deals'
+import { Route as DealRouteImport } from './routes/deal'
 import { Route as ConfigRouteImport } from './routes/config'
 import { Route as IndexRouteImport } from './routes/index'
 
+const Stage9Route = Stage9RouteImport.update({
+  id: '/stage-9',
+  path: '/stage-9',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Stage8Route = Stage8RouteImport.update({
+  id: '/stage-8',
+  path: '/stage-8',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Stage7Route = Stage7RouteImport.update({
+  id: '/stage-7',
+  path: '/stage-7',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Stage6Route = Stage6RouteImport.update({
+  id: '/stage-6',
+  path: '/stage-6',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Stage5Route = Stage5RouteImport.update({
+  id: '/stage-5',
+  path: '/stage-5',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Stage4Route = Stage4RouteImport.update({
+  id: '/stage-4',
+  path: '/stage-4',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Stage3Route = Stage3RouteImport.update({
   id: '/stage-3',
   path: '/stage-3',
@@ -22,6 +60,16 @@ const Stage3Route = Stage3RouteImport.update({
 const Stage2Route = Stage2RouteImport.update({
   id: '/stage-2',
   path: '/stage-2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DealsRoute = DealsRouteImport.update({
+  id: '/deals',
+  path: '/deals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DealRoute = DealRouteImport.update({
+  id: '/deal',
+  path: '/deal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfigRoute = ConfigRouteImport.update({
@@ -38,39 +86,150 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/config': typeof ConfigRoute
+  '/deal': typeof DealRoute
+  '/deals': typeof DealsRoute
   '/stage-2': typeof Stage2Route
   '/stage-3': typeof Stage3Route
+  '/stage-4': typeof Stage4Route
+  '/stage-5': typeof Stage5Route
+  '/stage-6': typeof Stage6Route
+  '/stage-7': typeof Stage7Route
+  '/stage-8': typeof Stage8Route
+  '/stage-9': typeof Stage9Route
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/config': typeof ConfigRoute
+  '/deal': typeof DealRoute
+  '/deals': typeof DealsRoute
   '/stage-2': typeof Stage2Route
   '/stage-3': typeof Stage3Route
+  '/stage-4': typeof Stage4Route
+  '/stage-5': typeof Stage5Route
+  '/stage-6': typeof Stage6Route
+  '/stage-7': typeof Stage7Route
+  '/stage-8': typeof Stage8Route
+  '/stage-9': typeof Stage9Route
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/config': typeof ConfigRoute
+  '/deal': typeof DealRoute
+  '/deals': typeof DealsRoute
   '/stage-2': typeof Stage2Route
   '/stage-3': typeof Stage3Route
+  '/stage-4': typeof Stage4Route
+  '/stage-5': typeof Stage5Route
+  '/stage-6': typeof Stage6Route
+  '/stage-7': typeof Stage7Route
+  '/stage-8': typeof Stage8Route
+  '/stage-9': typeof Stage9Route
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/config' | '/stage-2' | '/stage-3'
+  fullPaths:
+    | '/'
+    | '/config'
+    | '/deal'
+    | '/deals'
+    | '/stage-2'
+    | '/stage-3'
+    | '/stage-4'
+    | '/stage-5'
+    | '/stage-6'
+    | '/stage-7'
+    | '/stage-8'
+    | '/stage-9'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/config' | '/stage-2' | '/stage-3'
-  id: '__root__' | '/' | '/config' | '/stage-2' | '/stage-3'
+  to:
+    | '/'
+    | '/config'
+    | '/deal'
+    | '/deals'
+    | '/stage-2'
+    | '/stage-3'
+    | '/stage-4'
+    | '/stage-5'
+    | '/stage-6'
+    | '/stage-7'
+    | '/stage-8'
+    | '/stage-9'
+  id:
+    | '__root__'
+    | '/'
+    | '/config'
+    | '/deal'
+    | '/deals'
+    | '/stage-2'
+    | '/stage-3'
+    | '/stage-4'
+    | '/stage-5'
+    | '/stage-6'
+    | '/stage-7'
+    | '/stage-8'
+    | '/stage-9'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfigRoute: typeof ConfigRoute
+  DealRoute: typeof DealRoute
+  DealsRoute: typeof DealsRoute
   Stage2Route: typeof Stage2Route
   Stage3Route: typeof Stage3Route
+  Stage4Route: typeof Stage4Route
+  Stage5Route: typeof Stage5Route
+  Stage6Route: typeof Stage6Route
+  Stage7Route: typeof Stage7Route
+  Stage8Route: typeof Stage8Route
+  Stage9Route: typeof Stage9Route
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stage-9': {
+      id: '/stage-9'
+      path: '/stage-9'
+      fullPath: '/stage-9'
+      preLoaderRoute: typeof Stage9RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stage-8': {
+      id: '/stage-8'
+      path: '/stage-8'
+      fullPath: '/stage-8'
+      preLoaderRoute: typeof Stage8RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stage-7': {
+      id: '/stage-7'
+      path: '/stage-7'
+      fullPath: '/stage-7'
+      preLoaderRoute: typeof Stage7RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stage-6': {
+      id: '/stage-6'
+      path: '/stage-6'
+      fullPath: '/stage-6'
+      preLoaderRoute: typeof Stage6RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stage-5': {
+      id: '/stage-5'
+      path: '/stage-5'
+      fullPath: '/stage-5'
+      preLoaderRoute: typeof Stage5RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stage-4': {
+      id: '/stage-4'
+      path: '/stage-4'
+      fullPath: '/stage-4'
+      preLoaderRoute: typeof Stage4RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stage-3': {
       id: '/stage-3'
       path: '/stage-3'
@@ -83,6 +242,20 @@ declare module '@tanstack/react-router' {
       path: '/stage-2'
       fullPath: '/stage-2'
       preLoaderRoute: typeof Stage2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deals': {
+      id: '/deals'
+      path: '/deals'
+      fullPath: '/deals'
+      preLoaderRoute: typeof DealsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deal': {
+      id: '/deal'
+      path: '/deal'
+      fullPath: '/deal'
+      preLoaderRoute: typeof DealRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/config': {
@@ -105,9 +278,27 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfigRoute: ConfigRoute,
+  DealRoute: DealRoute,
+  DealsRoute: DealsRoute,
   Stage2Route: Stage2Route,
   Stage3Route: Stage3Route,
+  Stage4Route: Stage4Route,
+  Stage5Route: Stage5Route,
+  Stage6Route: Stage6Route,
+  Stage7Route: Stage7Route,
+  Stage8Route: Stage8Route,
+  Stage9Route: Stage9Route,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
