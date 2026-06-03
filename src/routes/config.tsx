@@ -86,7 +86,6 @@ function fmtVal(f: FieldDef, v: unknown) {
 function ConfigPage() {
   const router = useRouter();
   const [store, setStore] = useStore();
-  const [active, setActive] = useState("global");
   const [ctx, setCtx] = useState<{ dealType: string; scenario: string; market: string }>({ dealType: "", scenario: "", market: "" });
 
   const isBase = !ctx.dealType && !ctx.scenario && !ctx.market;
@@ -129,9 +128,6 @@ function ConfigPage() {
   const removeOverride = (id: string) => setStore({ ...store, overrides: store.overrides.filter((o) => o.id !== id) });
   const resetAll = () => setStore({ base: DEFAULT_CONFIG, overrides: [] });
 
-  const section = SECTIONS.find((s) => s.id === active)!;
-  const fields = SECTION_FIELDS[active] ?? [];
-
   const inputFor = (f: FieldDef, value: unknown, onChange: (v: number | string | boolean) => void) => {
     if (f.type === "bool")
       return <input type="checkbox" className="h-4 w-4" checked={!!value} onChange={(e) => onChange(e.target.checked)} />;
@@ -146,7 +142,6 @@ function ConfigPage() {
 
   const renderField = (f: FieldDef) => {
     const inherited = deepGet(store.base, f.path);
-    // Base editing, or a global-only field: edit base directly (read-only in a scope).
     if (isBase || f.baseOnly) {
       if (!isBase && f.baseOnly) {
         return (
@@ -157,7 +152,6 @@ function ConfigPage() {
       }
       return <Row key={f.path} label={f.label}>{inputFor(f, inherited, (v) => setBaseField(f.path, v))}</Row>;
     }
-    // Override scope: inherit unless explicitly overridden.
     const ov = currentOverride();
     const overridden = !!ov && Object.prototype.hasOwnProperty.call(ov.values, f.path);
     const val = overridden ? ov!.values[f.path] : inherited;
@@ -193,7 +187,7 @@ function ConfigPage() {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Configuration — Business Rules</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Global rules cascade into every stage. Select a scope to qualify rules by deal type, scenario or market.</p>
+            <p className="mt-1 text-sm text-muted-foreground">All global and stage rules on one page. Select a scope to qualify rules by deal type, scenario or market.</p>
           </div>
           <div className="flex shrink-0 gap-2">
             <button onClick={resetAll} className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
@@ -206,23 +200,23 @@ function ConfigPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[220px_1fr]">
-          {/* Sidebar */}
-          <nav className="space-y-1">
-            <button
-              onClick={() => setActive("global")}
-              className={`flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left text-sm font-semibold transition-colors ${active === "global" ? "border-accent bg-accent/10 text-foreground" : "border-accent/40 bg-card text-foreground hover:bg-accent/5"}`}
+          {/* Sidebar - anchor nav */}
+          <nav className="space-y-1 md:sticky md:top-4 md:self-start">
+            <a
+              href="#section-global"
+              className="flex w-full items-center gap-2 rounded-md border border-accent/40 bg-card px-3 py-2 text-left text-sm font-semibold text-foreground transition-colors hover:bg-accent/10"
             >
               <Globe className="h-4 w-4 text-accent" /> Global rules
-            </button>
+            </a>
             <div className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Stages</div>
             {SECTIONS.filter((s) => !s.global).map((s) => (
-              <button
+              <a
                 key={s.id}
-                onClick={() => setActive(s.id)}
-                className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors ${active === s.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                href={`#section-${s.id}`}
+                className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 {s.label}
-              </button>
+              </a>
             ))}
           </nav>
 
@@ -245,35 +239,39 @@ function ConfigPage() {
               </div>
             </div>
 
-            {/* Section panel */}
-            <section className="rounded-lg border border-border bg-card shadow-sm">
-              <div className="border-b border-border px-5 py-4">
-                <h2 className="text-base font-semibold text-foreground">{section.label.replace(/^\d+ · /, "")}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{section.note}</p>
-              </div>
+            {/* All sections rendered together */}
+            {SECTIONS.map((section) => {
+              const fields = SECTION_FIELDS[section.id] ?? [];
+              return (
+                <section key={section.id} id={`section-${section.id}`} className="scroll-mt-4 rounded-lg border border-border bg-card shadow-sm">
+                  <div className="border-b border-border px-5 py-4">
+                    <h2 className="text-base font-semibold text-foreground">{section.label.replace(/^\d+ · /, "")}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{section.note}</p>
+                  </div>
 
-              {/* Inherited-from-global strip (on stages only) */}
-              {!section.global && (
-                <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-border bg-secondary/30 px-5 py-2.5 text-xs">
-                  <span className="font-semibold uppercase tracking-wider text-muted-foreground">Inherited from Global</span>
-                  <span>Scope: <span className="font-medium text-foreground">{store.base.market.commodity} · {store.base.market.region} · {store.base.market.hub}</span></span>
-                  <span>Financial gate: <span className="font-medium text-foreground">{store.base.financialGate.enabled ? `≥ ${eur(store.base.financialGate.minGrossMarginEur)}` : "off"}</span></span>
-                  <span>Notional alert: <span className="font-medium text-foreground">{eur(store.base.compliance.singleDealNotionalAlertEur)}</span></span>
-                </div>
-              )}
+                  {!section.global && (
+                    <div className="flex flex-wrap gap-x-5 gap-y-1 border-b border-border bg-secondary/30 px-5 py-2.5 text-xs">
+                      <span className="font-semibold uppercase tracking-wider text-muted-foreground">Inherited from Global</span>
+                      <span>Scope: <span className="font-medium text-foreground">{store.base.market.commodity} · {store.base.market.region} · {store.base.market.hub}</span></span>
+                      <span>Financial gate: <span className="font-medium text-foreground">{store.base.financialGate.enabled ? `≥ ${eur(store.base.financialGate.minGrossMarginEur)}` : "off"}</span></span>
+                      <span>Notional alert: <span className="font-medium text-foreground">{eur(store.base.compliance.singleDealNotionalAlertEur)}</span></span>
+                    </div>
+                  )}
 
-              <div className="px-5 py-3">
-                {fields.length > 0 ? (
-                  isBase || section.global ? (
-                    <div className="divide-y divide-border">{fields.map(renderField)}</div>
-                  ) : (
-                    <div>{fields.map(renderField)}</div>
-                  )
-                ) : (
-                  <p className="py-4 text-sm text-muted-foreground">This stage has no rules of its own — it operates on the inherited global rules shown above.</p>
-                )}
-              </div>
-            </section>
+                  <div className="px-5 py-3">
+                    {fields.length > 0 ? (
+                      isBase || section.global ? (
+                        <div className="divide-y divide-border">{fields.map(renderField)}</div>
+                      ) : (
+                        <div>{fields.map(renderField)}</div>
+                      )
+                    ) : (
+                      <p className="py-4 text-sm text-muted-foreground">This stage has no rules of its own — it operates on the inherited global rules shown above.</p>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
 
             {/* Active overrides */}
             <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
