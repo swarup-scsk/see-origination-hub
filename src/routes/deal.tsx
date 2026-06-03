@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck, RotateCcw } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
-import { loadJSON, saveJSON, structKey, priceKey, riskKey } from "@/lib/store";
+import { loadJSON, saveJSON, structKey, priceKey, priceAssumKey, riskKey } from "@/lib/store";
 
 const STRUCT_URL = "http://localhost:5678/webhook/structure";
 const PRICE_URL = "http://localhost:5678/webhook/price";
@@ -48,6 +48,32 @@ type Risk = {
 type Step = "idle" | "loading" | "done";
 type Tab = "structure" | "pricing" | "risk";
 const eur = (n: number) => "€" + Math.round(n).toLocaleString();
+
+// Editable pricing assumptions — numbers stay deterministic, but the originator controls them.
+type Assumptions = { spread: number; swingPct: number; extrinsicPct: number; supplyMargin: number };
+const HUB_SPREAD: Record<string, number> = { TTF: 4.2, THE: 4.5, PEG: 3.8, PSV: 5.0 };
+function defaultAssumptions(hub: string): Assumptions {
+  return { spread: HUB_SPREAD[hub] ?? 4.2, swingPct: 20, extrinsicPct: 25, supplyMargin: 0.3 };
+}
+function computePricing(volumeGWh: number, a: Assumptions) {
+  const swing = Math.round(volumeGWh * (a.swingPct / 100));
+  const base = volumeGWh - swing;
+  const intrinsic = swing * 1000 * a.spread;
+  const extrinsic = intrinsic * (a.extrinsicPct / 100);
+  const supply = base * 1000 * a.supplyMargin;
+  const gross = intrinsic + extrinsic + supply;
+  return { swing, base, intrinsic, extrinsic, supply, gross };
+}
+function pricingLines(hub: string, a: Assumptions, pv: ReturnType<typeof computePricing>): Line[] {
+  return [
+    { label: `Seasonal spread (${hub} S/W)`, value: `€${a.spread.toFixed(2)}/MWh` },
+    { label: `Storage swing volume (${a.swingPct}%)`, value: `${pv.swing.toLocaleString()} GWh` },
+    { label: "Intrinsic storage value", value: eur(pv.intrinsic) },
+    { label: `Extrinsic (optionality, ${a.extrinsicPct}%)`, value: eur(pv.extrinsic) },
+    { label: `Supply baseload margin (€${a.supplyMargin.toFixed(2)}/MWh)`, value: eur(pv.supply) },
+    { label: "Indicative gross margin", value: eur(pv.gross) },
+  ];
+}
 
 async function post<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -114,8 +140,10 @@ function Deal() {
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [risk, setRisk] = useState<Risk | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [assum, setAssum] = useState<Assumptions>(defaultAssumptions(cfg.market.hub));
   const running = sStatus === "loading" || pStatus === "loading" || rStatus === "loading";
   const anyDone = !!(structure || pricing || risk);
+  const pv = prospect ? computePricing(prospect.volumeGWh, assum) : null;
 
   // Restore cached results.
   useEffect(() => {
@@ -123,10 +151,26 @@ function Deal() {
     const s = loadJSON<Structure>(structKey(company));
     const p = loadJSON<Pricing>(priceKey(company));
     const r = loadJSON<Risk>(riskKey(company));
+    const a = loadJSON<Assumptions>(priceAssumKey(company));
+    setAssum(a ?? defaultAssumptions(cfg.market.hub));
     if (s) { setStructure(s); setSStatus("done"); }
     if (p) { setPricing(p); setPStatus("done"); }
     if (r) { setRisk(r); setRStatus("done"); }
   }, [company]);
+
+  // Edit an assumption: persist it, and recompute the saved valuation so downstream stages stay consistent.
+  const updateAssum = (patch: Partial<Assumptions>) => {
+    if (!prospect) return;
+    const next = { ...assum, ...patch };
+    setAssum(next);
+    saveJSON(priceAssumKey(prospect.name), next);
+    if (pricing) {
+      const npv = computePricing(prospect.volumeGWh, next);
+      const np: Pricing = { ...pricing, grossMargin: npv.gross, lines: pricingLines(cfg.market.hub, next, npv) };
+      setPricing(np);
+      saveJSON(priceKey(prospect.name), np);
+    }
+  };
 
   const fbStructure = (): Structure => {
     const swing = Math.round(prospect!.volumeGWh * 0.2);
@@ -142,28 +186,6 @@ function Deal() {
         { component: "Indexation", detail: `${cfg.market.hub} month-ahead` },
       ],
       rationale: { structureRationale: "AI unavailable.", swingProfile: "AI unavailable.", optionality: "AI unavailable.", riskNote: "AI unavailable." },
-    };
-  };
-  const fbPricing = (): Pricing => {
-    const annual = prospect!.volumeGWh;
-    const swing = Math.round(annual * 0.2);
-    const base = annual - swing;
-    const spread = 4.2;
-    const intrinsic = swing * 1000 * spread;
-    const extrinsic = intrinsic * 0.25;
-    const supply = base * 1000 * 0.3;
-    const gross = intrinsic + extrinsic + supply;
-    return {
-      company: prospect!.name, currency: "EUR", grossMargin: gross,
-      lines: [
-        { label: `Seasonal spread (${cfg.market.hub} S/W)`, value: `€${spread.toFixed(2)}/MWh` },
-        { label: "Storage swing volume", value: `${swing.toLocaleString()} GWh` },
-        { label: "Intrinsic storage value", value: eur(intrinsic) },
-        { label: "Extrinsic (optionality, ~25%)", value: eur(extrinsic) },
-        { label: "Supply baseload margin", value: eur(supply) },
-        { label: "Indicative gross margin", value: eur(gross) },
-      ],
-      narrative: { drivers: "AI unavailable.", sensitivity: "AI unavailable.", caveat: "AI unavailable." },
     };
   };
   const fbRisk = (): Risk => {
@@ -198,8 +220,18 @@ function Deal() {
     setSStatus("done");
 
     setTab("pricing"); setPStatus("loading");
-    try { const p = await post<Pricing>(PRICE_URL, payload); setPricing(p); saveJSON(priceKey(prospect.name), p); }
-    catch (e) { const p = fbPricing(); setPricing(p); saveJSON(priceKey(prospect.name), p); setErrors((x) => ({ ...x, pricing: (e as Error).message })); }
+    {
+      const pvNow = computePricing(prospect.volumeGWh, assum);
+      const lines = pricingLines(cfg.market.hub, assum, pvNow);
+      try {
+        const p = await post<Pricing>(PRICE_URL, { config, prospect, assumptions: assum });
+        const np: Pricing = { company: prospect.name, currency: "EUR", grossMargin: pvNow.gross, lines, narrative: p.narrative };
+        setPricing(np); saveJSON(priceKey(prospect.name), np);
+      } catch (e) {
+        const np: Pricing = { company: prospect.name, currency: "EUR", grossMargin: pvNow.gross, lines, narrative: { drivers: "AI narrative unavailable.", sensitivity: "AI narrative unavailable.", caveat: "AI narrative unavailable." } };
+        setPricing(np); saveJSON(priceKey(prospect.name), np); setErrors((x) => ({ ...x, pricing: (e as Error).message }));
+      }
+    }
     setPStatus("done");
 
     setTab("risk"); setRStatus("loading");
@@ -317,12 +349,55 @@ function Deal() {
                   <p className="text-sm text-muted-foreground">Pricing runs after the structure.</p>
                 ) : pStatus === "loading" && !pricing ? (
                   <p className="text-sm text-muted-foreground">Valuing the storage swing…</p>
-                ) : pricing ? (
+                ) : pricing && pv ? (
                   <>
                     {errors.pricing && <Warn msg={errors.pricing} />}
-                    <Card title="Valuation breakdown">
-                      <KvTable rows={pricing.lines} highlightLabel="gross margin" />
+
+                    {/* Editable assumptions */}
+                    <Card title="Assumptions (editable — indicative only)">
+                      <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <Assum label={`Spread (${cfg.market.hub} S/W) €/MWh`} value={assum.spread} step={0.1} onChange={(v) => updateAssum({ spread: v })} />
+                        <Assum label="Swing % of volume" value={assum.swingPct} step={1} onChange={(v) => updateAssum({ swingPct: v })} />
+                        <Assum label="Extrinsic uplift %" value={assum.extrinsicPct} step={1} onChange={(v) => updateAssum({ extrinsicPct: v })} />
+                        <Assum label="Supply margin €/MWh" value={assum.supplyMargin} step={0.05} onChange={(v) => updateAssum({ supplyMargin: v })} />
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border px-4 py-2">
+                        <button
+                          onClick={() => updateAssum(defaultAssumptions(cfg.market.hub))}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Reset to hub defaults
+                        </button>
+                        <span className="text-xs text-muted-foreground">Numbers update live; AI narrative reflects the last run.</span>
+                      </div>
                     </Card>
+
+                    <Card title="Valuation breakdown">
+                      <KvTable rows={pricingLines(cfg.market.hub, assum, pv)} highlightLabel="gross margin" />
+                    </Card>
+
+                    {/* Sensitivity */}
+                    <Card title="Sensitivity — gross margin vs seasonal spread">
+                      <table className="w-full text-sm">
+                        <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+                          <tr>
+                            <th className="px-4 py-2 text-left">Spread</th>
+                            <th className="px-4 py-2 text-right">−€1.00</th>
+                            <th className="px-4 py-2 text-right">Base (€{assum.spread.toFixed(2)})</th>
+                            <th className="px-4 py-2 text-right">+€1.00</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-t border-border">
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gross margin</th>
+                            <td className="px-4 py-3 text-right text-foreground/90">{eur(computePricing(prospect!.volumeGWh, { ...assum, spread: Math.max(0, assum.spread - 1) }).gross)}</td>
+                            <td className="px-4 py-3 text-right font-bold text-foreground">{eur(pv.gross)}</td>
+                            <td className="px-4 py-3 text-right text-foreground/90">{eur(computePricing(prospect!.volumeGWh, { ...assum, spread: assum.spread + 1 }).gross)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </Card>
+
                     <Card title="AI valuation narrative" ai>
                       <AiRows rows={[
                         ["Value drivers", pricing.narrative.drivers],
@@ -400,7 +475,22 @@ function Warn({ msg }: { msg: string }) {
   return (
     <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-      Workflow unavailable — showing computed values only. ({msg})
+      AI narrative unavailable — numbers shown are computed from your assumptions. ({msg})
     </div>
+  );
+}
+
+function Assum({ label, value, step, onChange }: { label: string; value: number; step: number; onChange: (v: number) => void }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs">
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <input
+        type="number"
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        className="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/40"
+      />
+    </label>
   );
 }
