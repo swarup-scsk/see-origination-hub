@@ -381,12 +381,12 @@ function Stage3() {
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     {recorded?.decision === "Proceed" && gate?.pass && (
                       <Link
-                        to="/deal"
+                        to="/stage-4"
                         search={{ company: prospect.name }}
                         className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                       >
                         <CheckCircle2 className="h-4 w-4" />
-                        Proceed to deal analysis →
+                        Proceed to structuring →
                       </Link>
                     )}
                     {recorded && recorded.decision !== "Proceed" && (
