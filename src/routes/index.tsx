@@ -3,7 +3,7 @@ import { Check, Pencil, X, Info } from "lucide-react";
 import { useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import {
-  useConfig,
+  useBaseConfig,
   type Commodity,
   type Hub,
   type Region,
@@ -166,7 +166,7 @@ const HUBS: { code: string; name: string }[] = [
 ];
 
 function ScopeBar() {
-  const [cfg, setCfg] = useConfig();
+  const [cfg, setCfg] = useBaseConfig();
   const [editing, setEditing] = useState(false);
   const [info, setInfo] = useState(false);
   const hubName = HUBS.find((h) => h.code === cfg.market.hub)?.name ?? "";
