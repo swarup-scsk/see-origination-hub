@@ -220,10 +220,10 @@ function ConfigPage() {
             {(
               [
                 ["strategicFit", "Strategic fit"],
+                ["profitabilityPotential", "Profitability potential"],
+                ["portfolioSynergy", "Portfolio synergy"],
                 ["dealComplexity", "Deal complexity"],
                 ["dataAvailability", "Data availability"],
-                ["demoClarity", "Demo clarity"],
-                ["replicability", "Replicability"],
               ] as const
             ).map(([key, label]) => (
               <SliderRow

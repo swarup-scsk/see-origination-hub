@@ -33,10 +33,10 @@ type Scenario = {
 
 const CRITERIA = [
   "Strategic fit",
+  "Profitability potential",
+  "Portfolio synergy",
   "Deal complexity",
   "Data availability",
-  "Demo clarity",
-  "Replicability",
 ] as const;
 
 const SCENARIOS: Scenario[] = [
@@ -52,28 +52,28 @@ const SCENARIOS: Scenario[] = [
     id: "standalone-storage",
     title: "Standalone Storage Capacity",
     description: "Lease and optimise storage as a summer–winter spread option.",
-    ratings: [4, 4, 4, 4, 4],
+    ratings: [4, 4, 5, 4, 4],
     tag: "Alternative",
   },
   {
     id: "flexible-power",
     title: "Flexible Power Asset",
     description: "Route-to-market and revenue stacking for a battery or peaker.",
-    ratings: [5, 4, 5, 3, 4],
+    ratings: [5, 4, 3, 4, 5],
     tag: "Alternative",
   },
   {
     id: "corporate-ppa",
     title: "Corporate PPA",
     description: "Renewable offtake sleeved to a corporate buyer.",
-    ratings: [3, 3, 4, 4, 3],
+    ratings: [3, 3, 2, 3, 4],
     tag: "Alternative",
   },
   {
     id: "gas-producer-lng",
     title: "Gas Producer / LNG",
     description: "Cargo and regas into the supply chain.",
-    ratings: [3, 4, 3, 3, 3],
+    ratings: [3, 4, 3, 4, 3],
     tag: "Alternative",
   },
 ];
@@ -331,7 +331,7 @@ function Index() {
         <div className="mt-10 rounded-lg border-l-4 border-accent bg-secondary/60 px-5 py-4">
           <p className="text-sm text-foreground">
             <span className="font-semibold">Selected:</span> Gas Supply +
-            Storage — highest combined fit, complexity and replicability.
+            Storage — highest combined strategic fit, profitability potential and portfolio synergy.
           </p>
         </div>
       </main>

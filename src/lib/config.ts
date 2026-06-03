@@ -16,10 +16,10 @@ export type AppConfig = {
   };
   scenarioWeights: {
     strategicFit: number;
+    profitabilityPotential: number;
+    portfolioSynergy: number;
     dealComplexity: number;
     dataAvailability: number;
-    demoClarity: number;
-    replicability: number;
   };
   prospects: {
     minVolumeGWh: number;
@@ -52,11 +52,11 @@ export const DEFAULT_CONFIG: AppConfig = {
     hub: "TTF",
   },
   scenarioWeights: {
-    strategicFit: 20,
-    dealComplexity: 20,
-    dataAvailability: 20,
-    demoClarity: 20,
-    replicability: 20,
+    strategicFit: 25,
+    profitabilityPotential: 30,
+    portfolioSynergy: 20,
+    dealComplexity: 10,
+    dataAvailability: 15,
   },
   prospects: {
     minVolumeGWh: 800,
