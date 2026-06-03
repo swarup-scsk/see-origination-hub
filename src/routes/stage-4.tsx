@@ -1,13 +1,20 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 
-// Structuring is now part of the unified Deal Analysis workspace (/deal).
-// Keep this route for backward compatibility (stepper links, old URLs) and redirect.
+// Structuring lives in the unified Deal Analysis workspace (/deal).
+// Robust client-side redirect (kept so stepper links / old URLs still resolve).
 export const Route = createFileRoute("/stage-4")({
   validateSearch: (search: Record<string, unknown>) => ({
     company: typeof search.company === "string" ? search.company : "",
   }),
-  beforeLoad: ({ search }) => {
-    throw redirect({ to: "/deal", search: { company: (search as { company?: string }).company ?? "" } });
-  },
-  component: () => null,
+  component: RedirectToDeal,
 });
+
+function RedirectToDeal() {
+  const { company } = Route.useSearch();
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate({ to: "/deal", search: { company }, replace: true });
+  }, [company, navigate]);
+  return null;
+}

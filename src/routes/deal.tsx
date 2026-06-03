@@ -127,9 +127,10 @@ function Deal() {
     const r = loadJSON<Risk>(riskKey(company));
     const a = loadJSON<Assumptions>(priceAssumKey(company));
     setAssum(a ?? defaultAssumptions(cfg.market.hub));
-    if (s) { setStructure(s); setSStatus("done"); }
-    if (p) { setPricing(p); setPStatus("done"); }
-    if (r) { setRisk(r); setRStatus("done"); }
+    // Only accept well-formed cached results; ignore stale/older-shaped data so we never crash on a missing array.
+    if (s && Array.isArray(s.legs) && s.rationale) { setStructure(s); setSStatus("done"); } else { setStructure(null); setSStatus("idle"); }
+    if (p && Array.isArray(p.lines) && p.narrative) { setPricing(p); setPStatus("done"); } else { setPricing(null); setPStatus("idle"); }
+    if (r && Array.isArray(r.register) && r.narrative) { setRisk(r); setRStatus("done"); } else { setRisk(null); setRStatus("idle"); }
   }, [company]);
 
   // Edit an assumption: persist it, and recompute the saved valuation so downstream stages stay consistent.
