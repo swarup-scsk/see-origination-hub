@@ -30,3 +30,4 @@ export const contractKey = (company: string) => `see.contract.v1.${company}`;
 export const captureKey = (company: string) => `see.capture.v1.${company}`;
 export const decisionKey = (company: string) => `see.decision.v1.${company}`;
 export const approvalsKey = (company: string) => `see.approvals.v1.${company}`;
+export const EXPRESS_SCHED_KEY = "see.express.schedule.v1";

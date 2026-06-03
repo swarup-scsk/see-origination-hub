@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Settings, Briefcase } from "lucide-react";
+import { Settings, Briefcase, Zap } from "lucide-react";
 import { useConfig, scopeSubtitle } from "@/lib/config";
 import { Stepper } from "@/components/Stepper";
 
@@ -34,6 +34,14 @@ export function AppHeader({ stageLabel, subtitleOverride, current }: Props) {
               {stageLabel}
             </div>
           )}
+          <Link
+            to="/express"
+            title="Express draft (automated)"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <Zap className="h-4 w-4" />
+            Express
+          </Link>
           <Link
             to="/deals"
             title="Deals portfolio"
