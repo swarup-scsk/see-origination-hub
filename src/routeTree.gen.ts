@@ -17,6 +17,7 @@ import { Route as Stage5RouteImport } from './routes/stage-5'
 import { Route as Stage4RouteImport } from './routes/stage-4'
 import { Route as Stage3RouteImport } from './routes/stage-3'
 import { Route as Stage2RouteImport } from './routes/stage-2'
+import { Route as ExpressRouteImport } from './routes/express'
 import { Route as DealsRouteImport } from './routes/deals'
 import { Route as DealRouteImport } from './routes/deal'
 import { Route as ConfigRouteImport } from './routes/config'
@@ -62,6 +63,11 @@ const Stage2Route = Stage2RouteImport.update({
   path: '/stage-2',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExpressRoute = ExpressRouteImport.update({
+  id: '/express',
+  path: '/express',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DealsRoute = DealsRouteImport.update({
   id: '/deals',
   path: '/deals',
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/config': typeof ConfigRoute
   '/deal': typeof DealRoute
   '/deals': typeof DealsRoute
+  '/express': typeof ExpressRoute
   '/stage-2': typeof Stage2Route
   '/stage-3': typeof Stage3Route
   '/stage-4': typeof Stage4Route
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/config': typeof ConfigRoute
   '/deal': typeof DealRoute
   '/deals': typeof DealsRoute
+  '/express': typeof ExpressRoute
   '/stage-2': typeof Stage2Route
   '/stage-3': typeof Stage3Route
   '/stage-4': typeof Stage4Route
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/config': typeof ConfigRoute
   '/deal': typeof DealRoute
   '/deals': typeof DealsRoute
+  '/express': typeof ExpressRoute
   '/stage-2': typeof Stage2Route
   '/stage-3': typeof Stage3Route
   '/stage-4': typeof Stage4Route
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/config'
     | '/deal'
     | '/deals'
+    | '/express'
     | '/stage-2'
     | '/stage-3'
     | '/stage-4'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/config'
     | '/deal'
     | '/deals'
+    | '/express'
     | '/stage-2'
     | '/stage-3'
     | '/stage-4'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/config'
     | '/deal'
     | '/deals'
+    | '/express'
     | '/stage-2'
     | '/stage-3'
     | '/stage-4'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   ConfigRoute: typeof ConfigRoute
   DealRoute: typeof DealRoute
   DealsRoute: typeof DealsRoute
+  ExpressRoute: typeof ExpressRoute
   Stage2Route: typeof Stage2Route
   Stage3Route: typeof Stage3Route
   Stage4Route: typeof Stage4Route
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Stage2RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/express': {
+      id: '/express'
+      path: '/express'
+      fullPath: '/express'
+      preLoaderRoute: typeof ExpressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/deals': {
       id: '/deals'
       path: '/deals'
@@ -280,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfigRoute: ConfigRoute,
   DealRoute: DealRoute,
   DealsRoute: DealsRoute,
+  ExpressRoute: ExpressRoute,
   Stage2Route: Stage2Route,
   Stage3Route: Stage3Route,
   Stage4Route: Stage4Route,
@@ -292,3 +313,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
