@@ -247,7 +247,7 @@ function Stage8() {
                     title={canBook ? "" : "All four sign-offs and the compliance check are required"}
                     className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                   >
-                    Book deal into ETRM
+                    Book deal into CRM
                   </button>
                 ) : (
                   <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800">
