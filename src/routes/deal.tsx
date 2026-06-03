@@ -194,7 +194,7 @@ function Deal() {
     catch (e) { const s = fbStructure(); setStructure(s); saveJSON(structKey(prospect.name), s); setErrors((x) => ({ ...x, structure: (e as Error).message })); }
     setSStatus("done");
 
-    setTab("pricing"); setPStatus("loading");
+    setPStatus("loading");
     {
       const pvNow = computePricing(prospect.volumeGWh, assum);
       const lines = pricingLines(cfg.market.hub, assum, pvNow);
@@ -209,7 +209,7 @@ function Deal() {
     }
     setPStatus("done");
 
-    setTab("risk"); setRStatus("loading");
+    setRStatus("loading");
     try { const r = await post<Risk>(RISK_URL, payload); setRisk(r); saveJSON(riskKey(prospect.name), r); }
     catch (e) { const r = fbRisk(); setRisk(r); saveJSON(riskKey(prospect.name), r); setErrors((x) => ({ ...x, risk: (e as Error).message })); }
     setRStatus("done");
