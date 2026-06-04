@@ -191,9 +191,11 @@ function Deal() {
     // Sequential — respects the single local model, and lets each tab fill as it lands.
     setTab("structure"); setSStatus("loading");
     try {
-      const s = await post<Structure>(STRUCT_URL, payload);
+      let s = await post<any>(STRUCT_URL, payload);
+      if (Array.isArray(s)) s = s[0];               // n8n sometimes wraps the response in an array
+      if (s && s.json) s = s.json;                  // …or in an item envelope
       if (!s || !Array.isArray(s.legs) || !s.rationale) throw new Error("Malformed structure response");
-      setStructure(s); saveJSON(structKey(prospect.name), s);
+      setStructure(s as Structure); saveJSON(structKey(prospect.name), s);
     }
     catch (e) { const s = fbStructure(); setStructure(s); saveJSON(structKey(prospect.name), s); setErrors((x) => ({ ...x, structure: (e as Error).message })); }
     setSStatus("done");
@@ -203,7 +205,9 @@ function Deal() {
       const pvNow = computePricing(prospect.volumeGWh, assum);
       const lines = pricingLines(cfg.market.hub, assum, pvNow);
       try {
-        const p = await post<Pricing>(PRICE_URL, { config, prospect, assumptions: assum });
+        let p = await post<any>(PRICE_URL, { config, prospect, assumptions: assum });
+        if (Array.isArray(p)) p = p[0];
+        if (p && p.json) p = p.json;
         if (!p || !p.narrative) throw new Error("Malformed pricing response");
         const np: Pricing = { company: prospect.name, currency: "EUR", grossMargin: pvNow.gross, lines, narrative: p.narrative };
         setPricing(np); saveJSON(priceKey(prospect.name), np);
@@ -216,9 +220,11 @@ function Deal() {
 
     setRStatus("loading");
     try {
-      const r = await post<Risk>(RISK_URL, payload);
+      let r = await post<any>(RISK_URL, payload);
+      if (Array.isArray(r)) r = r[0];
+      if (r && r.json) r = r.json;
       if (!r || !Array.isArray(r.register) || !r.narrative) throw new Error("Malformed risk response");
-      setRisk(r); saveJSON(riskKey(prospect.name), r);
+      setRisk(r as Risk); saveJSON(riskKey(prospect.name), r);
     }
     catch (e) { const r = fbRisk(); setRisk(r); saveJSON(riskKey(prospect.name), r); setErrors((x) => ({ ...x, risk: (e as Error).message })); }
     setRStatus("done");
