@@ -190,7 +190,11 @@ function Deal() {
 
     // Sequential — respects the single local model, and lets each tab fill as it lands.
     setTab("structure"); setSStatus("loading");
-    try { const s = await post<Structure>(STRUCT_URL, payload); setStructure(s); saveJSON(structKey(prospect.name), s); }
+    try {
+      const s = await post<Structure>(STRUCT_URL, payload);
+      if (!s || !Array.isArray(s.legs) || !s.rationale) throw new Error("Malformed structure response");
+      setStructure(s); saveJSON(structKey(prospect.name), s);
+    }
     catch (e) { const s = fbStructure(); setStructure(s); saveJSON(structKey(prospect.name), s); setErrors((x) => ({ ...x, structure: (e as Error).message })); }
     setSStatus("done");
 
@@ -200,6 +204,7 @@ function Deal() {
       const lines = pricingLines(cfg.market.hub, assum, pvNow);
       try {
         const p = await post<Pricing>(PRICE_URL, { config, prospect, assumptions: assum });
+        if (!p || !p.narrative) throw new Error("Malformed pricing response");
         const np: Pricing = { company: prospect.name, currency: "EUR", grossMargin: pvNow.gross, lines, narrative: p.narrative };
         setPricing(np); saveJSON(priceKey(prospect.name), np);
       } catch (e) {
@@ -210,7 +215,11 @@ function Deal() {
     setPStatus("done");
 
     setRStatus("loading");
-    try { const r = await post<Risk>(RISK_URL, payload); setRisk(r); saveJSON(riskKey(prospect.name), r); }
+    try {
+      const r = await post<Risk>(RISK_URL, payload);
+      if (!r || !Array.isArray(r.register) || !r.narrative) throw new Error("Malformed risk response");
+      setRisk(r); saveJSON(riskKey(prospect.name), r);
+    }
     catch (e) { const r = fbRisk(); setRisk(r); saveJSON(riskKey(prospect.name), r); setErrors((x) => ({ ...x, risk: (e as Error).message })); }
     setRStatus("done");
   };
@@ -300,7 +309,7 @@ function Deal() {
                   <p className="text-sm text-muted-foreground">Run the analysis to generate the structure.</p>
                 ) : sStatus === "loading" && !structure ? (
                   <p className="text-sm text-muted-foreground">Assembling legs and drafting rationale…</p>
-                ) : structure ? (
+                ) : structure && Array.isArray(structure.legs) && structure.rationale ? (
                   <>
                     {errors.structure && <Warn msg={errors.structure} />}
                     <Card title={`Indicative term sheet — ${structure.structureType}`}>
