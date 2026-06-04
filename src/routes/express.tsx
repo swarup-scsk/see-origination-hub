@@ -107,10 +107,10 @@ function buildContract(p: Prospect, hub: string) {
       { label: "Annual contract quantity", value: `${p.volumeGWh.toLocaleString()} GWh/yr` },
       { label: "Swing volume", value: `~${swing.toLocaleString()} GWh` },
       { label: "Tenor", value: "2 gas years (Oct–Sep)" },
-      { label: "Master agreement", value: "EFET General Agreement + confirmation" },
+      { label: "Master agreement", value: "European Federation of Energy Traders (EFET) General Agreement + confirmation" },
     ],
     draft: {
-      draftSummary: "Standard EFET supply + storage confirmation. (sample)",
+      draftSummary: "Standard European Federation of Energy Traders (EFET) supply + storage confirmation. (sample)",
       offMarket: "No off-market terms detected. (sample)",
       redline: "Propose a volume tolerance band of ±5%. (sample)",
     },
@@ -253,7 +253,7 @@ function ExpressPage() {
             <PackCard title="Risk & Credit" editTo="/deal" company={company}
               rows={[["Rating", risk.rating], ["Summary", risk.narrative.riskSummary]]} />
             <PackCard title="Contracting" editTo="/stage-7" company={company}
-              rows={[["Master", "EFET General Agreement"], ["Redline", buildContract(prospect, cfg.market.hub).draft.redline]]} />
+              rows={[["Master", "European Federation of Energy Traders (EFET) General Agreement"], ["Redline", buildContract(prospect, cfg.market.hub).draft.redline]]} />
 
             <div className="flex flex-wrap gap-3 pt-2">
               <Link

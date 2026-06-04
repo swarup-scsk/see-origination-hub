@@ -34,7 +34,7 @@ const SECTIONS: { id: string; label: string; note: string; global?: boolean }[] 
   { id: "structuring", label: "4 · Structuring", note: "Soft guardrails flagged while building the deal." },
   { id: "pricing", label: "5 · Pricing", note: "Valuation assumptions are set per deal on the Deal Analysis screen; this stage inherits the financial gate." },
   { id: "risk", label: "6 · Risk & Credit", note: "Inherits the compliance threshold; credit rating tiers are built in." },
-  { id: "contracting", label: "7 · Contracting", note: "Inherits market scope; uses the EFET template." },
+  { id: "contracting", label: "7 · Contracting", note: "Inherits market scope; uses the European Federation of Energy Traders (EFET) template." },
   { id: "approval", label: "8 · Approval & Compliance", note: "Inherits the single-deal notional alert (Global); named sign-offs are recorded at the stage." },
   { id: "lifecycle", label: "9 · Lifecycle", note: "No stage-specific rules." },
 ];

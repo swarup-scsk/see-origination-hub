@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, AlertTriangle, ArrowRight, Layers, Coins, ShieldCheck, RotateCcw, CheckCircle2, Download, Mail } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { readConfig, useConfig } from "@/lib/config";
 import { findProspect } from "@/lib/prospects";
 import { loadJSON, saveJSON, structKey, priceKey, priceAssumKey, riskKey } from "@/lib/store";
 import { type Assumptions, defaultAssumptions, computePricing, pricingLines, eur } from "@/lib/economics";
+import { buildDocHtml, downloadDoc, emailDoc, type Section } from "@/lib/docexport";
 
 const STRUCT_URL = "http://localhost:5678/webhook/structure";
 const PRICE_URL = "http://localhost:5678/webhook/price";
@@ -230,6 +231,39 @@ function Deal() {
     setRStatus("done");
   };
 
+  const exportSections = (): Section[] => {
+    const secs: Section[] = [];
+    if (structure) {
+      secs.push({ heading: `Structure — ${structure.structureType}`, rows: structure.legs.map((l) => [l.component, l.detail] as [string, string]) });
+      secs.push({ heading: "AI structuring rationale", paragraphs: [
+        ["Why this structure", structure.rationale.structureRationale],
+        ["Seasonal swing profile", structure.rationale.swingProfile],
+        ["Embedded optionality", structure.rationale.optionality],
+        ["Structuring risk", structure.rationale.riskNote],
+      ] });
+    }
+    if (pricing) {
+      secs.push({ heading: "Pricing — valuation breakdown", rows: pricing.lines.map((l) => [l.label, l.value] as [string, string]) });
+      secs.push({ heading: "AI valuation narrative", paragraphs: [
+        ["Value drivers", pricing.narrative.drivers],
+        ["Key sensitivity", pricing.narrative.sensitivity],
+        ["Assumption caveat", pricing.narrative.caveat],
+      ] });
+    }
+    if (risk) {
+      secs.push({ heading: "Risk & credit register", rows: risk.register.map((l) => [l.label, l.value] as [string, string]) });
+      secs.push({ heading: "AI risk assessment", paragraphs: [
+        ["Overall risk", risk.narrative.riskSummary],
+        ["Credit view", risk.narrative.creditView],
+        ["Recommended mitigants", risk.narrative.mitigants],
+        ["KYC note", risk.narrative.kycNote],
+      ] });
+    }
+    return secs;
+  };
+  const onDownload = () => downloadDoc(`SEE-DealAnalysis-${company.replace(/[^a-z0-9]+/gi, "-")}`, buildDocHtml(`Deal Analysis — ${company}`, `${cfg.market.commodity} · ${cfg.market.hub}`, exportSections()));
+  const onEmail = () => emailDoc(`SEE Origination — Deal Analysis — ${company}`, exportSections());
+
   const stepperFor: Record<Tab, number> = { structure: 4, pricing: 5, risk: 6 };
 
   const TABS: { id: Tab; label: string; icon: typeof Layers; st: Step }[] = [
@@ -444,7 +478,7 @@ function Deal() {
             </div>
 
             {sStatus === "done" && pStatus === "done" && rStatus === "done" && (
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   to="/stage-7"
                   search={{ company: prospect.name }}
@@ -453,6 +487,18 @@ function Deal() {
                   Proceed to contracting
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+                <button
+                  onClick={onDownload}
+                  className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Download className="h-4 w-4" /> Download
+                </button>
+                <button
+                  onClick={onEmail}
+                  className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <Mail className="h-4 w-4" /> Email
+                </button>
               </div>
             )}
           </>

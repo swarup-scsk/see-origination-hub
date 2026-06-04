@@ -117,7 +117,7 @@ function Stage8() {
     struct && { stage: "Structuring", detail: struct.structureType },
     price && { stage: "Pricing", detail: `Indicative gross margin ${eur(price.grossMargin)}` },
     risk && { stage: "Risk & credit", detail: `Rating ${risk.rating}` },
-    contract && { stage: "Contracting", detail: "EFET-based confirmation drafted" },
+    contract && { stage: "Contracting", detail: "European Federation of Energy Traders (EFET)-based confirmation drafted" },
     compliance && { stage: "Compliance", detail: `${compliance.status}` },
     ...ROLES.filter((r) => approvals[r.key]).map((r) => ({ stage: `${r.label} approval`, detail: `Approved by ${approvals[r.key].by} · ${new Date(approvals[r.key].at).toLocaleString()}` })),
     capture && { stage: "Deal capture", detail: `Booked ${capture.ref} at ${new Date(capture.bookedAt).toLocaleString()}` },
